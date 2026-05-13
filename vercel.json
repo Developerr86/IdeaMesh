@@ -1,0 +1,10 @@
+{
+  "functions": {
+    "src/app/api/agents/brainstorm/route.ts": { "maxDuration": 60 },
+    "src/app/api/agents/qa/route.ts": { "maxDuration": 60 },
+    "src/app/api/agents/probe/route.ts": { "maxDuration": 60 },
+    "src/app/api/agents/scout/route.ts": { "maxDuration": 60 },
+    "src/app/api/agents/compare/route.ts": { "maxDuration": 60 },
+    "src/app/api/agents/blueprint/route.ts": { "maxDuration": 60 }
+  }
+}

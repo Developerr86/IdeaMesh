@@ -1,11 +1,15 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { usePipelineStore } from '@/store/pipelineStore'
-import { Sparkles, ArrowRight, Clock, Trash2, User, Briefcase } from 'lucide-react'
+import { Sparkles, ArrowRight, Clock, Trash2, User, Briefcase, LogIn } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { STAGES } from '@/types/pipeline'
+import { createClient } from '@/lib/supabase/client'
+import { UserMenu } from '@/components/ui/UserMenu'
+import Link from 'next/link'
+import type { User as SupabaseUser } from '@supabase/supabase-js'
 
 function formatDate(ts: number): string {
   const diff = Date.now() - ts
@@ -24,18 +28,42 @@ export default function LandingPage() {
   const [description, setDescription] = useState('')
   const [ideaType, setIdeaType] = useState<'personal' | 'business'>('personal')
   const [isLoading, setIsLoading] = useState(false)
-  const { savedPipelines, initPipeline, loadPipeline, deletePipeline } = usePipelineStore()
-  const router = useRouter()
+  const [user, setUser] = useState<SupabaseUser | null>(null)
 
-  const handleSubmit = () => {
+  const { savedPipelines, initPipeline, loadPipeline, deletePipeline, fetchSavedPipelines } =
+    usePipelineStore()
+  const router = useRouter()
+  const supabase = createClient()
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user)
+      if (user) fetchSavedPipelines()
+    })
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null)
+      if (session?.user) fetchSavedPipelines()
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
+
+  const handleSubmit = async () => {
     if (!title.trim() || !description.trim()) return
+
+    if (!user) {
+      router.push('/auth/login?next=/')
+      return
+    }
+
     setIsLoading(true)
     initPipeline(title.trim(), description.trim(), ideaType)
     router.push('/mesh')
   }
 
-  const handleLoad = (id: string) => {
-    loadPipeline(id)
+  const handleLoad = async (id: string) => {
+    await loadPipeline(id)
     router.push('/mesh')
   }
 
@@ -43,6 +71,11 @@ export default function LandingPage() {
 
   return (
     <main className="min-h-screen flex flex-col items-center justify-center px-4 py-16">
+      {/* Top-right user menu */}
+      <div className="fixed top-4 right-5">
+        <UserMenu />
+      </div>
+
       <div className="flex items-center gap-2 mb-12">
         <Sparkles className="w-5 h-5 text-accent-purple" />
         <span className="text-sm font-semibold tracking-tight text-gradient-purple">IdeaMesh</span>
@@ -73,6 +106,7 @@ export default function LandingPage() {
           rows={4}
           className="w-full bg-surface-1 border border-border rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/20 resize-none focus:outline-none focus:border-accent-purple/50 transition-colors"
         />
+
         {/* Idea type toggle */}
         <div className="flex rounded-xl border border-border overflow-hidden">
           <button
@@ -111,12 +145,29 @@ export default function LandingPage() {
               : 'bg-surface-2 text-white/20 cursor-not-allowed',
           )}
         >
-          {isLoading ? 'Starting pipeline...' : 'Start ideation'}
-          <ArrowRight className="w-4 h-4" />
+          {isLoading
+            ? 'Starting pipeline...'
+            : !user
+              ? 'Sign in to start'
+              : 'Start ideation'}
+          {!isLoading && (user ? <ArrowRight className="w-4 h-4" /> : <LogIn className="w-4 h-4" />)}
         </button>
+
+        {!user && (
+          <p className="text-center text-xs text-white/30">
+            <Link href="/auth/login" className="text-accent-purple hover:text-accent-purple/80 transition-colors">
+              Sign in
+            </Link>
+            {' '}or{' '}
+            <Link href="/auth/signup" className="text-accent-purple hover:text-accent-purple/80 transition-colors">
+              create an account
+            </Link>
+            {' '}to save your ideas
+          </p>
+        )}
       </div>
 
-      {savedPipelines.length > 0 && (
+      {user && savedPipelines.length > 0 && (
         <div className="w-full max-w-lg mt-12">
           <div className="flex items-center gap-2 mb-4">
             <Clock className="w-3.5 h-3.5 text-white/30" />

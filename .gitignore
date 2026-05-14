@@ -42,3 +42,4 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 IdeaMesh_Build_Plan.md
+.mcp.json

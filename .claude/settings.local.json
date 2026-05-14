@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__supabase__list_tables",
+      "mcp__supabase__get_publishable_keys",
+      "mcp__supabase__get_project_url",
+      "mcp__supabase__apply_migration",
+      "Bash(npm install *)",
+      "Bash(npm run *)",
+      "Bash(Get-Content \"D:\\\\Projects\\\\IdeaMesh\\\\ideamesh\\\\node_modules\\\\next\\\\dist\\\\docs\\\\index.md\")",
+      "Bash(Select-Object -First 60)"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "supabase"
+  ]
+}

@@ -4,7 +4,7 @@ import { BrainstormOutput, QAOutput, UserAnswers } from '@/types/pipeline'
 import { AgentCard } from '@/components/ui/AgentCard'
 import { Tag } from '@/components/ui/Tag'
 import { useState } from 'react'
-import { ChevronRight, ArrowLeft } from 'lucide-react'
+import { ChevronRight, ArrowLeft, RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface MeshPanelProps {
@@ -16,16 +16,30 @@ interface MeshPanelProps {
   errorMessage?: string
   onRetry?: () => void
   onAnswersSubmit: (answers: UserAnswers) => void
+  onContinue: () => void
 }
 
-export function MeshPanel({ brainstorm, qa, userAnswers, isRunning, isError, errorMessage, onRetry, onAnswersSubmit }: MeshPanelProps) {
-  const [phase, setPhase] = useState<'brainstorm' | 'qna'>(qa ? 'qna' : 'brainstorm')
+export function MeshPanel({
+  brainstorm,
+  qa,
+  userAnswers,
+  isRunning,
+  isError,
+  errorMessage,
+  onRetry,
+  onAnswersSubmit,
+  onContinue,
+}: MeshPanelProps) {
+  const hasQuestions = (qa?.questions?.length ?? 0) > 0
+  const [phase, setPhase] = useState<'brainstorm' | 'qna'>(
+    hasQuestions ? 'qna' : 'brainstorm',
+  )
   const [currentIndex, setCurrentIndex] = useState(0)
   const [localAnswers, setLocalAnswers] = useState<UserAnswers>(userAnswers)
   const [customMode, setCustomMode] = useState(false)
 
-  const totalQuestions = qa?.questions.length ?? 0
-  const currentQuestion = qa?.questions[currentIndex]
+  const totalQuestions = qa?.questions?.length ?? 0
+  const currentQuestion = qa?.questions?.[currentIndex]
   const isLastQuestion = currentIndex >= totalQuestions - 1
 
   function selectOption(question: string, option: string) {
@@ -86,13 +100,36 @@ export function MeshPanel({ brainstorm, qa, userAnswers, isRunning, isError, err
                 </div>
               </div>
 
-              {qa && (
+              {/* Q&A transition — only show button when we have actual questions */}
+              {qa && hasQuestions && (
                 <button
                   onClick={() => setPhase('qna')}
                   className="flex items-center gap-1.5 text-xs font-medium text-accent-purple hover:text-accent-purple/80 transition-colors pt-2"
                 >
                   Proceed to Q&A Agent <ChevronRight className="w-3 h-3" />
                 </button>
+              )}
+
+              {/* Q&A returned no questions — let user re-run or skip */}
+              {qa && !hasQuestions && (
+                <div className="flex items-center gap-4 pt-2">
+                  <span className="text-xs text-white/25">Q&A returned no questions.</span>
+                  {onRetry && (
+                    <button
+                      onClick={onRetry}
+                      className="flex items-center gap-1 text-xs text-white/30 hover:text-white/60 transition-colors"
+                    >
+                      <RefreshCw className="w-3 h-3" />
+                      Re-run
+                    </button>
+                  )}
+                  <button
+                    onClick={onContinue}
+                    className="flex items-center gap-1.5 text-xs font-medium text-accent-purple hover:text-accent-purple/80 transition-colors"
+                  >
+                    Skip to Probe <ChevronRight className="w-3 h-3" />
+                  </button>
+                </div>
               )}
             </div>
           ) : (

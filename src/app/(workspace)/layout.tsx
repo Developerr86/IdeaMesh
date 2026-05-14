@@ -6,6 +6,7 @@ import { StageId } from '@/types/pipeline'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 import { Sparkles, RotateCcw, Save } from 'lucide-react'
+import { UserMenu } from '@/components/ui/UserMenu'
 
 const STAGE_ROUTES: Record<StageId, string> = {
   seed: '/',
@@ -56,7 +57,7 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
         <div className="flex-1 mx-6 max-w-xs">
           <p className="text-xs font-medium text-white/60 truncate">{pipeline.context.idea.title}</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
           <button
             onClick={handleSave}
             className="flex items-center gap-1.5 text-xs text-white/30 hover:text-white/60 transition-colors"
@@ -71,6 +72,7 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
             <RotateCcw className="w-3 h-3" />
             New idea
           </button>
+          <UserMenu />
         </div>
       </header>
 

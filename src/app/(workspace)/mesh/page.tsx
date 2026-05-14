@@ -111,9 +111,11 @@ export default function MeshPage() {
         errorMessage={error}
         onRetry={runMesh}
         onAnswersSubmit={handleAnswersSubmit}
+        onContinue={handleContinue}
       />
 
-      {ctx?.userAnswers && Object.keys(ctx.userAnswers).length > 0 && (
+      {/* Show Continue once answers are submitted (has keys) or the user skipped Q&A (userAnswers defined but empty) */}
+      {ctx?.userAnswers != null && (
         <button
           onClick={handleContinue}
           className="flex items-center gap-1.5 text-xs font-medium text-accent-purple hover:text-accent-purple/80 transition-colors"

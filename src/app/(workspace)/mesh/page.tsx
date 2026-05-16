@@ -8,7 +8,7 @@ import { UserAnswers, BrainstormOutput, QAOutput } from '@/types/pipeline'
 import { ChevronRight, RefreshCw } from 'lucide-react'
 
 export default function MeshPage() {
-  const { pipeline, setStageStatus, setCurrentStage, updateContext } = usePipelineStore()
+  const { pipeline, setStageStatus, setCurrentStage, updateContext, savePipeline } = usePipelineStore()
   const router = useRouter()
   const [isRunning, setIsRunning] = useState(false)
   const [error, setError] = useState<string | undefined>()
@@ -73,8 +73,17 @@ export default function MeshPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pipeline?.id])
 
-  function handleAnswersSubmit(answers: UserAnswers) {
+  async function handleAnswersSubmit(answers: UserAnswers) {
     updateContext({ userAnswers: answers })
+    await savePipeline()
+  }
+
+  function handleToggleExpansion(expansion: string) {
+    const current = ctx?.selectedExpansions ?? []
+    const next = current.includes(expansion)
+      ? current.filter((e) => e !== expansion)
+      : [...current, expansion]
+    updateContext({ selectedExpansions: next })
   }
 
   function handleContinue() {
@@ -106,6 +115,8 @@ export default function MeshPage() {
         brainstorm={ctx?.brainstorm}
         qa={ctx?.qa}
         userAnswers={ctx?.userAnswers ?? {}}
+        selectedExpansions={ctx?.selectedExpansions ?? []}
+        onToggleExpansion={handleToggleExpansion}
         isRunning={isRunning}
         isError={stageStatus === 'error'}
         errorMessage={error}

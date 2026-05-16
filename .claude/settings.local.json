@@ -8,7 +8,10 @@
       "Bash(npm install *)",
       "Bash(npm run *)",
       "Bash(Get-Content \"D:\\\\Projects\\\\IdeaMesh\\\\ideamesh\\\\node_modules\\\\next\\\\dist\\\\docs\\\\index.md\")",
-      "Bash(Select-Object -First 60)"
+      "Bash(Select-Object -First 60)",
+      "mcp__supabase__get_advisors",
+      "Bash(npx tsc *)",
+      "Bash(npx eslint *)"
     ]
   },
   "enableAllProjectMcpServers": true,

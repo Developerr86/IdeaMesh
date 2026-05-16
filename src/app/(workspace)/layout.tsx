@@ -4,9 +4,13 @@ import { usePipelineStore } from '@/store/pipelineStore'
 import { StageRail } from '@/components/pipeline/StageRail'
 import { StageId } from '@/types/pipeline'
 import { useRouter } from 'next/navigation'
-import { useEffect } from 'react'
-import { Sparkles, RotateCcw, Save } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Sparkles, RotateCcw, Save, Pencil, Check, Loader2 } from 'lucide-react'
 import { UserMenu } from '@/components/ui/UserMenu'
+import { useEditModeStore } from '@/store/editModeStore'
+import { EditPopover } from '@/components/ui/EditPopover'
+import { RefinementQueueBar } from '@/components/ui/RefinementQueueBar'
+import { cn } from '@/lib/utils'
 
 const STAGE_ROUTES: Record<StageId, string> = {
   seed: '/',
@@ -21,6 +25,8 @@ const STAGE_ROUTES: Record<StageId, string> = {
 export default function WorkspaceLayout({ children }: { children: React.ReactNode }) {
   const { pipeline, resetPipeline, setCurrentStage, savePipeline } = usePipelineStore()
   const router = useRouter()
+  const isEditMode = useEditModeStore((s) => s.isEditMode)
+  const toggleEditMode = useEditModeStore((s) => s.toggleEditMode)
 
   useEffect(() => {
     if (!pipeline) {
@@ -28,7 +34,22 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
     }
   }, [pipeline, router])
 
+  // Tri-state save feedback. Derived (not effect-driven): we record the
+  // pipeline references that were last successfully persisted in `lastSaved`,
+  // and the saved state is true iff the current references still match.
+  // Any user mutation produces new references, so the comparison falls back to
+  // 'idle' on the very next render — no manual reset needed.
+  type SaveState = 'idle' | 'saving' | 'saved'
+  const [isSaving, setIsSaving] = useState(false)
+  const [lastSaved, setLastSaved] = useState<{ context: unknown; stages: unknown } | null>(null)
+
   if (!pipeline) return null
+
+  const isPersisted =
+    lastSaved !== null &&
+    lastSaved.context === pipeline.context &&
+    lastSaved.stages === pipeline.stages
+  const saveState: SaveState = isSaving ? 'saving' : isPersisted ? 'saved' : 'idle'
 
   const ideaType = pipeline.context.idea?.type || 'personal'
   const hiddenStageIds: StageId[] = ideaType === 'personal' ? ['pitchdeck'] : []
@@ -43,8 +64,17 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
     router.push('/')
   }
 
-  const handleSave = () => {
-    savePipeline()
+  const handleSave = async () => {
+    if (isSaving || isPersisted) return
+    setIsSaving(true)
+    try {
+      await savePipeline()
+      // Record the snapshot we just persisted; saveState will derive to 'saved'
+      // until pipeline.context or pipeline.stages get new references.
+      setLastSaved({ context: pipeline.context, stages: pipeline.stages })
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   return (
@@ -59,11 +89,38 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
         </div>
         <div className="flex items-center gap-4">
           <button
-            onClick={handleSave}
-            className="flex items-center gap-1.5 text-xs text-white/30 hover:text-white/60 transition-colors"
+            onClick={toggleEditMode}
+            className={cn(
+              'flex items-center gap-1.5 text-xs transition-colors',
+              isEditMode
+                ? 'text-accent-purple'
+                : 'text-white/30 hover:text-white/60',
+            )}
+            aria-pressed={isEditMode}
           >
-            <Save className="w-3 h-3" />
-            Save
+            <Pencil className="w-3 h-3" />
+            {isEditMode ? 'Editing' : 'Edit'}
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={saveState !== 'idle'}
+            className={cn(
+              'flex items-center gap-1.5 text-xs transition-colors',
+              saveState === 'saved'
+                ? 'text-accent-green/80 cursor-default'
+                : saveState === 'saving'
+                  ? 'text-white/40 cursor-progress'
+                  : 'text-white/30 hover:text-white/60',
+            )}
+          >
+            {saveState === 'saving' ? (
+              <Loader2 className="w-3 h-3 animate-spin" />
+            ) : saveState === 'saved' ? (
+              <Check className="w-3 h-3" />
+            ) : (
+              <Save className="w-3 h-3" />
+            )}
+            {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved' : 'Save'}
           </button>
           <button
             onClick={handleReset}
@@ -92,6 +149,9 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
           </div>
         </main>
       </div>
+
+      <EditPopover />
+      <RefinementQueueBar />
     </div>
   )
 }

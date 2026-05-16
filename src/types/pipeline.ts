@@ -172,6 +172,11 @@ export interface PipelineContext {
   }
   userAnswers?: UserAnswers
   brainstorm?: BrainstormOutput
+  // Subset of brainstorm.expansions the user has explicitly opted into.
+  // When defined, downstream stages should treat these as the "in scope" expansions
+  // and de-emphasise the rest. Stored as strings (not indices) so that edits to
+  // brainstorm.expansions don't silently shift the selection.
+  selectedExpansions?: string[]
   qa?: QAOutput
   prosCons?: ProsConsOutput
   critique?: CritiqueOutput
@@ -194,4 +199,10 @@ export interface PipelineState {
   currentStage: StageId
   stages: Record<StageId, StageState>
   context: PipelineContext
+  // Branching: every pipeline belongs to a tree rooted at `rootId` (self for roots).
+  // `parentId` + `forkedAtStage` describe how this branch diverged from its parent.
+  rootId: string
+  parentId?: string
+  branchName?: string
+  forkedAtStage?: StageId
 }

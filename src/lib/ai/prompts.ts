@@ -1,5 +1,27 @@
 import { PipelineContext } from '@/types/pipeline'
 
+// Emit the brainstorm expansions in the prompt context, distinguishing which
+// the user has explicitly selected as in-scope vs. the rest of the suggestions.
+function formatExpansions(ctx: PipelineContext): string {
+  if (!ctx.brainstorm) return ''
+  const all = ctx.brainstorm.expansions
+  const selected = ctx.selectedExpansions
+  if (!selected || selected.length === 0) {
+    return `\n## Brainstorm expansions\n${all.join('\n')}`
+  }
+  const selectedSet = new Set(selected)
+  const inScope = all.filter((e) => selectedSet.has(e))
+  const others = all.filter((e) => !selectedSet.has(e))
+  const lines: string[] = []
+  lines.push('\n## Brainstorm expansions (user-selected — treat as primary)')
+  lines.push(inScope.length ? inScope.join('\n') : '(none selected)')
+  if (others.length) {
+    lines.push('\n### Other expansions (de-emphasised; do not rely on these)')
+    lines.push(others.join('\n'))
+  }
+  return lines.join('\n')
+}
+
 function contextBlock(ctx: PipelineContext): string {
   return `
 ## The idea
@@ -7,7 +29,7 @@ Title: ${ctx.idea.title}
 Description: ${ctx.idea.description}
 Type: ${ctx.idea.type === 'business' ? 'Business / Commercial project' : 'Personal / Hobby project'}
 ${ctx.userAnswers ? `\n## User's clarifications\n${Object.entries(ctx.userAnswers).map(([q, a]) => `Q: ${q}\nA: ${a}`).join('\n\n')}` : ''}
-${ctx.brainstorm ? `\n## Brainstorm expansions\n${ctx.brainstorm.expansions.join('\n')}` : ''}
+${ctx.brainstorm ? formatExpansions(ctx) : ''}
 ${ctx.prosCons ? `\n## Pros/Cons analysis\nPros: ${ctx.prosCons.pros.join(', ')}\nCons: ${ctx.prosCons.cons.join(', ')}` : ''}
 ${ctx.critique ? `\n## Critique\n${ctx.critique.critique}` : ''}
 ${ctx.scout ? `\n## Competitor research summary\n${ctx.scout.summary}` : ''}

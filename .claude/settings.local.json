@@ -11,11 +11,15 @@
       "Bash(Select-Object -First 60)",
       "mcp__supabase__get_advisors",
       "Bash(npx tsc *)",
-      "Bash(npx eslint *)"
+      "Bash(npx eslint *)",
+      "Bash(Select-String \"framer\")"
     ]
   },
   "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "supabase"
-  ]
+  ],
+  "enabledPlugins": {
+    "frontend-design@claude-plugins-official": true
+  }
 }

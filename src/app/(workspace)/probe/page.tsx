@@ -64,7 +64,7 @@ export default function ProbePage() {
   if (!pipeline) return null
 
   return (
-    <div className="space-y-6 animate-fade-up">
+    <div className="space-y-6">
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-sm font-semibold text-white mb-1">Stage 3 — Probe</h1>

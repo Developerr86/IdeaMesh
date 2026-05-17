@@ -2,8 +2,8 @@
 
 import { usePipelineStore } from '@/store/pipelineStore'
 import { StageRail } from '@/components/pipeline/StageRail'
-import { StageId } from '@/types/pipeline'
-import { useRouter } from 'next/navigation'
+import { STAGES, StageId } from '@/types/pipeline'
+import { useRouter, usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { Sparkles, RotateCcw, Save, Pencil, Check, Loader2 } from 'lucide-react'
 import { UserMenu } from '@/components/ui/UserMenu'
@@ -11,6 +11,15 @@ import { useEditModeStore } from '@/store/editModeStore'
 import { EditPopover } from '@/components/ui/EditPopover'
 import { RefinementQueueBar } from '@/components/ui/RefinementQueueBar'
 import { cn } from '@/lib/utils'
+import { motion, AnimatePresence } from 'framer-motion'
+
+const STAGE_ORDER = STAGES.map((s) => s.id)
+
+const slideVariants = {
+  enter: (dir: number) => ({ x: dir > 0 ? '100%' : '-100%', y: 0 }),
+  center: { x: 0, y: 0 },
+  exit:  (dir: number) => ({ x: dir > 0 ? '-100%' : '100%', y: 0 }),
+}
 
 const STAGE_ROUTES: Record<StageId, string> = {
   seed: '/',
@@ -25,8 +34,10 @@ const STAGE_ROUTES: Record<StageId, string> = {
 export default function WorkspaceLayout({ children }: { children: React.ReactNode }) {
   const { pipeline, resetPipeline, setCurrentStage, savePipeline } = usePipelineStore()
   const router = useRouter()
+  const pathname = usePathname()
   const isEditMode = useEditModeStore((s) => s.isEditMode)
   const toggleEditMode = useEditModeStore((s) => s.toggleEditMode)
+  const [direction, setDirection] = useState(1)
 
   useEffect(() => {
     if (!pipeline) {
@@ -55,6 +66,9 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
   const hiddenStageIds: StageId[] = ideaType === 'personal' ? ['pitchdeck'] : []
 
   const handleStageClick = (id: StageId) => {
+    const from = STAGE_ORDER.indexOf(pipeline.currentStage)
+    const to   = STAGE_ORDER.indexOf(id)
+    setDirection(to > from ? 1 : -1)
     setCurrentStage(id)
     router.push(STAGE_ROUTES[id])
   }
@@ -143,10 +157,23 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
           />
         </aside>
 
-        <main className="flex-1 overflow-y-auto p-6">
-          <div className="max-w-2xl mx-auto">
-            {children}
-          </div>
+        <main className="flex-1 overflow-hidden relative">
+          <AnimatePresence custom={direction} mode="sync" initial={false}>
+            <motion.div
+              key={pathname}
+              custom={direction}
+              variants={slideVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{ duration: 0.28, ease: [0.4, 0, 0.2, 1] }}
+              className="absolute inset-0 overflow-y-auto p-6"
+            >
+              <div className="max-w-2xl mx-auto">
+                {children}
+              </div>
+            </motion.div>
+          </AnimatePresence>
         </main>
       </div>
 

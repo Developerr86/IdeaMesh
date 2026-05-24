@@ -67,7 +67,7 @@ export default function BlueprintPage() {
           <p className="text-xs text-white/30">
             {stageStatus === 'done'
               ? 'Your complete build plan is ready.'
-              : 'Synthesising everything into a build plan...'}
+              : 'Synthesising everything into a build plan (3 passes — this takes a moment)...'}
           </p>
         </div>
         {stageStatus === 'done' && (

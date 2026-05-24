@@ -1,4 +1,4 @@
-import { PipelineContext } from '@/types/pipeline'
+import { PipelineContext, BlueprintOutput } from '@/types/pipeline'
 
 // Emit the brainstorm expansions in the prompt context, distinguishing which
 // the user has explicitly selected as in-scope vs. the rest of the suggestions.
@@ -160,45 +160,112 @@ Respond ONLY with valid JSON. No markdown fences. Schema:
 `
 }
 
-export function blueprintPrompt(ctx: PipelineContext): string {
-  return `You are a senior software architect and technical project lead. Based on the full ideation pipeline below, produce a comprehensive, actionable build plan.
+// ─── Blueprint (3-call strategy) ─────────────────────────────────────────────
+
+export function blueprintCorePrompt(ctx: PipelineContext): string {
+  return `You are a senior software architect and technical lead. Based on the full ideation pipeline below, produce a comprehensive technical architecture overview.
 
 ${contextBlock(ctx)}
 
 Respond ONLY with valid JSON. No markdown fences. Schema:
 {
-  "projectName": "<refined project name>",
-  "elevatorPitch": "<2-3 sentence pitch>",
-  "targetAudience": "<specific, detailed primary audience>",
-  "coreFeatures": ["<5-8 core MVP features>"],
+  "projectName": "<refined, memorable project name>",
+  "elevatorPitch": "<3-4 sentences covering: the problem being solved, the solution, who it is for, and the key differentiator>",
+  "targetAudience": "<detailed description including role, context, specific pain points, and how they will use this product day-to-day>",
+  "coreFeatures": ["<8-12 core features — each described specifically enough that a developer knows exactly what to build>"],
   "techStack": {
-    "frontend": ["<frameworks, libraries>"],
-    "backend": ["<runtime, frameworks, APIs>"],
-    "database": ["<database choices with reasoning>"],
-    "infrastructure": ["<hosting, CI/CD, storage>"],
-    "aiTools": ["<LLMs, embeddings, vector DBs if relevant>"]
+    "frontend": ["<specific frameworks and key libraries with version preferences and justification>"],
+    "backend": ["<runtime, framework, key packages — be opinionated>"],
+    "database": ["<database engine(s) and why, schema approach, ORM/query builder if any>"],
+    "infrastructure": ["<hosting platform, CI/CD pipeline, file storage, CDN, observability stack>"],
+    "aiTools": ["<specific LLMs, embedding models, vector DB, AI SDK or framework if relevant — or omit section if not applicable>"]
   },
   "mcpSuggestions": [
-    { "name": "<MCP server name>", "purpose": "<why it helps>", "url": "<mcp or docs url>" }
+    {
+      "name": "<MCP server name>",
+      "purpose": "<2-3 sentences: what this MCP enables, the specific use case in this project, and how to wire it up>",
+      "url": "<GitHub or docs URL>"
+    }
   ],
-  "codingTools": ["<VS Code extensions, CLI tools, linters, etc>"],
+  "codingTools": ["<specific VS Code extensions, CLI tools, linters, formatters, testing frameworks — with the reason each one matters>"],
+  "estimatedTimeline": "<total build timeline with brief reasoning>",
+  "mvpScope": ["<10-15 specific, shippable MVP items concrete enough to put on a sprint board>"]
+}
+
+Be specific and opinionated. Use real package names, actual version numbers where known, concrete tool names. No vague generics.
+`
+}
+
+export function blueprintPhasesPrompt(ctx: PipelineContext): string {
+  return `You are a senior software architect creating a detailed phased build plan. Based on the ideation pipeline below, define comprehensive build phases with highly specific, actionable tasks.
+
+${contextBlock(ctx)}
+
+Respond ONLY with valid JSON. No markdown fences. Schema:
+{
   "buildPhases": [
     {
       "phase": 1,
-      "name": "<phase name>",
-      "duration": "<estimated duration>",
-      "tasks": ["<specific tasks>"],
-      "deliverable": "<what gets shipped>"
+      "name": "<descriptive phase name>",
+      "duration": "<realistic duration estimate>",
+      "tasks": [
+        "<each task must be a concrete developer action — include exact CLI commands to run, config files to create, specific components or API routes to build, third-party services to connect, tests to write. Example: 'Run npx create-next-app@14 with TypeScript, Tailwind, and App Router flags', 'Create /api/auth/[...nextauth]/route.ts with GitHub and Google OAuth providers', 'Build <DataTable> component with column sorting, pagination, and row selection'>"
+      ],
+      "deliverable": "<precise description of what is working, testable, and demonstrable at the end of this phase>"
     }
-  ],
-  "codingAgentPrompts": [
-    { "label": "<task label>", "prompt": "<ready-to-use prompt for a coding agent>" }
-  ],
-  "estimatedTimeline": "<total estimated build timeline>",
-  "mvpScope": ["<what is in MVP>"]
+  ]
 }
 
-  Be specific and opinionated. Name actual packages, actual tools, real version numbers where known.
+Generate 4-6 phases that progress logically from project foundation to production launch. Each phase MUST have at minimum 10 tasks — not vague bullet points but concrete, immediately actionable developer steps. Reference real tools, packages, and patterns appropriate to the idea.
+`
+}
+
+export function blueprintAgentPromptsPrompt(
+  ctx: PipelineContext,
+  core: Pick<BlueprintOutput, 'projectName' | 'elevatorPitch' | 'techStack' | 'coreFeatures' | 'mvpScope'>,
+  phases: BlueprintOutput['buildPhases'],
+): string {
+  const stack = core.techStack
+  const stackSummary = stack
+    ? [
+        stack.frontend?.length ? `Frontend: ${stack.frontend.join(', ')}` : '',
+        stack.backend?.length ? `Backend: ${stack.backend.join(', ')}` : '',
+        stack.database?.length ? `Database: ${stack.database.join(', ')}` : '',
+        stack.infrastructure?.length ? `Infrastructure: ${stack.infrastructure.join(', ')}` : '',
+        stack.aiTools?.length ? `AI/ML: ${stack.aiTools.join(', ')}` : '',
+      ].filter(Boolean).join('\n')
+    : ''
+
+  const phaseList = phases
+    .map((p) => `  Phase ${p.phase} — ${p.name}: ${p.deliverable}`)
+    .join('\n')
+
+  return `You are a senior software architect writing ready-to-use prompts for an AI coding agent (Claude Code, Cursor, Copilot Workspace). Each prompt must be fully self-contained — the coding agent should be able to start implementing immediately without needing to ask any clarifying questions.
+
+${contextBlock(ctx)}
+
+## Confirmed architecture
+Project: ${core.projectName ?? ctx.idea.title}
+Pitch: ${core.elevatorPitch ?? ctx.idea.description}
+Tech stack:
+${stackSummary}
+Core features: ${core.coreFeatures?.join(', ') ?? ''}
+MVP scope: ${core.mvpScope?.join(', ') ?? ''}
+
+## Build phases overview
+${phaseList}
+
+Respond ONLY with valid JSON. No markdown fences. Schema:
+{
+  "codingAgentPrompts": [
+    {
+      "label": "<specific component, feature, or system name>",
+      "prompt": "<self-contained prompt of 200-350 words that must include ALL of: (1) the component's purpose and its role in the overall system, (2) exact tech stack and package names to use, (3) complete list of requirements including edge cases and error states to handle, (4) integration points with other parts of the system and the expected data contracts, (5) expected file structure or API shape, (6) any specific patterns, conventions, or constraints to follow. The agent should produce production-quality code on the first pass with no follow-up questions.>"
+    }
+  ]
+}
+
+Generate 7-10 prompts, each covering a distinct component or system area. Cover ALL of these areas (adapt naming to the project): (1) project scaffolding and monorepo/build configuration, (2) authentication and authorisation, (3) core data models and database schema with migrations, (4) primary feature implementation — split into multiple prompts if complex, (5) API layer and server-side routes, (6) key UI components and page layouts, (7) third-party service integrations, (8) background jobs or real-time features if applicable, (9) test suite setup and critical test cases, (10) deployment and environment configuration. Each prompt must be 200-350 words of dense, actionable detail.
 `
 }
 

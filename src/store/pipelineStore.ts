@@ -13,7 +13,7 @@ import { createClient } from '@/lib/supabase/client'
 const DATA_PREFIX = 'ideamesh-data-'
 
 function generateId(): string {
-  return Math.random().toString(36).slice(2, 10)
+  return crypto.randomUUID()
 }
 
 function defaultStageStates(): Record<StageId, StageState> {
@@ -346,7 +346,19 @@ export const usePipelineStore = create<PipelineStore>()(
       fetchSavedPipelines: async () => {
         const user = await getAuthUser()
 
-        if (!user) return
+        if (!user) {
+          const metas: SavedPipelineMeta[] = []
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i)
+            if (!key?.startsWith(DATA_PREFIX)) continue
+            try {
+              const p: PipelineState = JSON.parse(localStorage.getItem(key)!)
+              if (!p.parentId) metas.push(metaFromPipeline(p))
+            } catch { /* skip corrupt entries */ }
+          }
+          set({ savedPipelines: metas.sort((a, b) => b.lastModified - a.lastModified) })
+          return
+        }
 
         const supabase = createClient()
         // Only return root pipelines for the saved-list view; branches are shown

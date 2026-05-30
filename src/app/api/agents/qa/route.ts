@@ -8,7 +8,13 @@ export const maxDuration = 60
 
 export async function POST(req: Request) {
   try {
-    const { context }: { context: PipelineContext } = await req.json()
+    const body = (await req.json()) as Partial<{ context: PipelineContext }>
+
+    if (!body.context) {
+      return Response.json({ error: 'Missing required field: context' }, { status: 400 })
+    }
+
+    const { context } = body
 
     const completion = await getAI().chat.completions.create({
       model: getModel(),
@@ -17,8 +23,13 @@ export async function POST(req: Request) {
       max_tokens: 800,
     })
 
-    const content = completion.choices[0]?.message?.content ?? '{}'
-    const result = safeParseJSON<QAOutput>(content, { questions: [] })
+    const raw = completion.choices[0]?.message?.content ?? ''
+    if (!raw || raw === '{}') {
+      console.error('[qa] empty response from model')
+      return Response.json({ error: 'Q&A agent returned empty or invalid response' }, { status: 502 })
+    }
+
+    const result = safeParseJSON<QAOutput>(raw, { questions: [] })
     return Response.json({ result })
   } catch (err) {
     console.error('[qa]', err)

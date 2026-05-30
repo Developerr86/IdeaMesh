@@ -10,6 +10,10 @@
 export type PathSegment = string | number
 
 export function parsePath(path: string): PathSegment[] {
+  if (!path) throw new Error('parsePath: path must not be empty')
+  if (/^[.\[\]]/.test(path)) throw new Error(`parsePath: path cannot start with ".", "[", or "]": "${path}"`)
+  if (/\..\./.test(path)) throw new Error(`parsePath: path contains empty segment: "${path}"`)
+
   const segments: PathSegment[] = []
   // Split on "." then expand any "key[idx]" tokens into ["key", idx].
   for (const token of path.split('.')) {

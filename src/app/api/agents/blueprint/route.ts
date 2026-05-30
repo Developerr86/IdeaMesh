@@ -24,7 +24,13 @@ const coreFallback: CoreBlueprint = {
 
 export async function POST(req: Request) {
   try {
-    const { context }: { context: PipelineContext } = await req.json()
+    const body = (await req.json()) as Partial<{ context: PipelineContext }>
+
+    if (!body.context) {
+      return Response.json({ error: 'Missing required field: context' }, { status: 400 })
+    }
+
+    const { context } = body
     const ai = getAI()
     const model = getModel()
 
@@ -44,14 +50,20 @@ export async function POST(req: Request) {
       }),
     ])
 
-    const core = safeParseJSON<CoreBlueprint>(
-      coreCompletion.choices[0]?.message?.content ?? '{}',
-      coreFallback,
-    )
-    const phasesData = safeParseJSON<PhasesResult>(
-      phasesCompletion.choices[0]?.message?.content ?? '{}',
-      { buildPhases: [] },
-    )
+    const coreRaw = coreCompletion.choices[0]?.message?.content ?? ''
+    if (!coreRaw || coreRaw === '{}') {
+      console.error('[blueprint] empty core response from model')
+      return Response.json({ error: 'Blueprint core agent returned empty or invalid response' }, { status: 502 })
+    }
+
+    const phasesRaw = phasesCompletion.choices[0]?.message?.content ?? ''
+    if (!phasesRaw || phasesRaw === '{}') {
+      console.error('[blueprint] empty phases response from model')
+      return Response.json({ error: 'Blueprint phases agent returned empty or invalid response' }, { status: 502 })
+    }
+
+    const core = safeParseJSON<CoreBlueprint>(coreRaw, coreFallback)
+    const phasesData = safeParseJSON<PhasesResult>(phasesRaw, { buildPhases: [] })
 
     // Round 2 — sequential: coding agent prompts (uses core + phases for rich context)
     const promptsCompletion = await ai.chat.completions.create({
@@ -66,10 +78,13 @@ export async function POST(req: Request) {
       max_tokens: 6000,
     })
 
-    const promptsData = safeParseJSON<PromptsResult>(
-      promptsCompletion.choices[0]?.message?.content ?? '{}',
-      { codingAgentPrompts: [] },
-    )
+    const promptsRaw = promptsCompletion.choices[0]?.message?.content ?? ''
+    if (!promptsRaw || promptsRaw === '{}') {
+      console.error('[blueprint] empty prompts response from model')
+      return Response.json({ error: 'Blueprint prompts agent returned empty or invalid response' }, { status: 502 })
+    }
+
+    const promptsData = safeParseJSON<PromptsResult>(promptsRaw, { codingAgentPrompts: [] })
 
     const result: BlueprintOutput = {
       ...core,

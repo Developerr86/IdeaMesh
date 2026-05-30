@@ -8,7 +8,13 @@ export const maxDuration = 60
 
 export async function POST(req: Request) {
   try {
-    const { context }: { context: PipelineContext } = await req.json()
+    const body = (await req.json()) as Partial<{ context: PipelineContext }>
+
+    if (!body.context) {
+      return Response.json({ error: 'Missing required field: context' }, { status: 400 })
+    }
+
+    const { context } = body
 
     const [prosConsResult, critiqueResult] = await Promise.all([
       getAI().chat.completions.create({
@@ -25,16 +31,25 @@ export async function POST(req: Request) {
       }),
     ])
 
-    const prosConsContent = prosConsResult.choices[0]?.message?.content ?? '{}'
-    const critiqueContent = critiqueResult.choices[0]?.message?.content ?? '{}'
+    const prosConsRaw = prosConsResult.choices[0]?.message?.content ?? ''
+    const critiqueRaw = critiqueResult.choices[0]?.message?.content ?? ''
 
-    const prosCons = safeParseJSON<ProsConsOutput>(prosConsContent, {
+    if (!prosConsRaw || prosConsRaw === '{}') {
+      console.error('[probe] empty pros/cons response from model')
+      return Response.json({ error: 'Pros/Cons agent returned empty or invalid response' }, { status: 502 })
+    }
+    if (!critiqueRaw || critiqueRaw === '{}') {
+      console.error('[probe] empty critique response from model')
+      return Response.json({ error: 'Critique agent returned empty or invalid response' }, { status: 502 })
+    }
+
+    const prosCons = safeParseJSON<ProsConsOutput>(prosConsRaw, {
       pros: [],
       cons: [],
       opportunities: [],
       threats: [],
     })
-    const critique = safeParseJSON<CritiqueOutput>(critiqueContent, {
+    const critique = safeParseJSON<CritiqueOutput>(critiqueRaw, {
       critique: '',
       riskLevel: 'medium',
       tags: [],

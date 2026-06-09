@@ -1,15 +1,13 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { isSupabaseConfigured } from '@/lib/supabase/config'
 import { cn } from '@/lib/utils'
 import { Eye, EyeOff, Loader2, CheckCircle } from 'lucide-react'
 
 export default function SignupPage() {
-  const router = useRouter()
-
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -19,10 +17,15 @@ export default function SignupPage() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
 
-  const supabase = createClient()
+  const configured = isSupabaseConfigured()
+  const supabase = configured ? createClient() : null
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!supabase) {
+      setError('Sign up is unavailable because Supabase is not configured.')
+      return
+    }
     if (!email || !password || !fullName) return
     setLoading(true)
     setError('')
@@ -47,6 +50,10 @@ export default function SignupPage() {
   }
 
   const handleGoogle = async () => {
+    if (!supabase) {
+      setError('Google sign in is unavailable because Supabase is not configured.')
+      return
+    }
     setGoogleLoading(true)
     const origin = window.location.origin
     const { error } = await supabase.auth.signInWithOAuth({
@@ -134,10 +141,10 @@ export default function SignupPage() {
 
         <button
           type="submit"
-          disabled={loading || !email || !password || !fullName}
+          disabled={loading || !email || !password || !fullName || !configured}
           className={cn(
             'w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-medium transition-all',
-            email && password && fullName && !loading
+            email && password && fullName && !loading && configured
               ? 'bg-accent-purple text-white hover:bg-accent-purple/90'
               : 'bg-surface-2 text-white/20 cursor-not-allowed',
           )}
@@ -154,7 +161,7 @@ export default function SignupPage() {
 
       <button
         onClick={handleGoogle}
-        disabled={googleLoading}
+        disabled={googleLoading || !configured}
         className="w-full flex items-center justify-center gap-3 py-3 rounded-xl text-sm font-medium bg-surface-1 border border-border hover:border-border-strong text-white/70 hover:text-white transition-all disabled:opacity-50"
       >
         {googleLoading ? (

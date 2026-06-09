@@ -4,6 +4,7 @@ import { Suspense, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { isSupabaseConfigured } from '@/lib/supabase/config'
 import { cn } from '@/lib/utils'
 import { Eye, EyeOff, Loader2 } from 'lucide-react'
 
@@ -20,10 +21,15 @@ function LoginForm() {
   const [googleLoading, setGoogleLoading] = useState(false)
   const [error, setError] = useState(urlError === 'auth-error' ? 'Authentication failed. Please try again.' : '')
 
-  const supabase = createClient()
+  const configured = isSupabaseConfigured()
+  const supabase = configured ? createClient() : null
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!supabase) {
+      setError('Sign in is unavailable because Supabase is not configured.')
+      return
+    }
     if (!email || !password) return
     setLoading(true)
     setError('')
@@ -40,6 +46,10 @@ function LoginForm() {
   }
 
   const handleGoogle = async () => {
+    if (!supabase) {
+      setError('Google sign in is unavailable because Supabase is not configured.')
+      return
+    }
     setGoogleLoading(true)
     const origin = window.location.origin
     const { error } = await supabase.auth.signInWithOAuth({
@@ -108,10 +118,10 @@ function LoginForm() {
 
         <button
           type="submit"
-          disabled={loading || !email || !password}
+          disabled={loading || !email || !password || !configured}
           className={cn(
             'w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-medium transition-all',
-            email && password && !loading
+            email && password && !loading && configured
               ? 'bg-accent-purple text-white hover:bg-accent-purple/90'
               : 'bg-surface-2 text-white/20 cursor-not-allowed',
           )}
@@ -128,7 +138,7 @@ function LoginForm() {
 
       <button
         onClick={handleGoogle}
-        disabled={googleLoading}
+        disabled={googleLoading || !configured}
         className="w-full flex items-center justify-center gap-3 py-3 rounded-xl text-sm font-medium bg-surface-1 border border-border hover:border-border-strong text-white/70 hover:text-white transition-all disabled:opacity-50"
       >
         {googleLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <GoogleIcon />}

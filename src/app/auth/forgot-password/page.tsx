@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { isSupabaseConfigured } from '@/lib/supabase/config'
 import { cn } from '@/lib/utils'
 import { Loader2, Mail } from 'lucide-react'
 
@@ -12,10 +13,15 @@ export default function ForgotPasswordPage() {
   const [error, setError] = useState('')
   const [sent, setSent] = useState(false)
 
-  const supabase = createClient()
+  const configured = isSupabaseConfigured()
+  const supabase = configured ? createClient() : null
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!supabase) {
+      setError('Password reset is unavailable because Supabase is not configured.')
+      return
+    }
     if (!email) return
     setLoading(true)
     setError('')
@@ -75,10 +81,10 @@ export default function ForgotPasswordPage() {
 
         <button
           type="submit"
-          disabled={loading || !email}
+          disabled={loading || !email || !configured}
           className={cn(
             'w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-medium transition-all',
-            email && !loading
+            email && !loading && configured
               ? 'bg-accent-purple text-white hover:bg-accent-purple/90'
               : 'bg-surface-2 text-white/20 cursor-not-allowed',
           )}

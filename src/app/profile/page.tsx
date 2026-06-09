@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { isSupabaseConfigured } from '@/lib/supabase/config'
 import { usePipelineStore } from '@/store/pipelineStore'
 import { STAGES } from '@/types/pipeline'
 import { cn } from '@/lib/utils'
@@ -36,17 +37,20 @@ function stageLabel(id: string): string {
 
 export default function ProfilePage() {
   const router = useRouter()
-  const supabase = createClient()
+  const configured = isSupabaseConfigured()
+  const supabase = configured ? createClient() : null
 
   const [user, setUser] = useState<SupabaseUser | null>(null)
   const [fullName, setFullName] = useState('')
   const [saving, setSaving] = useState(false)
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle')
-  const [loadingUser, setLoadingUser] = useState(true)
+  const [loadingUser, setLoadingUser] = useState(configured)
 
   const { savedPipelines, loadPipeline, deletePipeline, fetchSavedPipelines } = usePipelineStore()
 
   useEffect(() => {
+    if (!supabase) return
+
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) {
         router.replace('/auth/login')
@@ -56,14 +60,16 @@ export default function ProfilePage() {
       setFullName(user.user_metadata?.full_name || user.user_metadata?.name || '')
       setLoadingUser(false)
     })
-  }, [])
+  }, [router, supabase])
 
   useEffect(() => {
+    if (!configured) return
     fetchSavedPipelines()
-  }, [])
+  }, [configured, fetchSavedPipelines])
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!supabase) return
     setSaving(true)
     setSaveStatus('idle')
 
@@ -82,6 +88,7 @@ export default function ProfilePage() {
   }
 
   const handleSignOut = async () => {
+    if (!supabase) return
     await supabase.auth.signOut()
     router.push('/')
     router.refresh()
@@ -96,6 +103,23 @@ export default function ProfilePage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="w-5 h-5 text-accent-purple animate-spin" />
+      </div>
+    )
+  }
+
+  if (!configured) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4">
+        <div className="w-full max-w-sm text-center">
+          <Sparkles className="w-8 h-8 text-accent-purple mx-auto mb-4" />
+          <h1 className="text-lg font-semibold text-white mb-2">Local mode</h1>
+          <p className="text-sm text-white/40 mb-6">
+            Account settings are unavailable because Supabase is not configured.
+          </p>
+          <Link href="/" className="text-sm text-accent-purple hover:text-accent-purple/80 transition-colors">
+            Back to IdeaMesh
+          </Link>
+        </div>
       </div>
     )
   }

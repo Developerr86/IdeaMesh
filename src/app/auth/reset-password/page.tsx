@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { isSupabaseConfigured } from '@/lib/supabase/config'
 import { cn } from '@/lib/utils'
 import { Eye, EyeOff, Loader2, CheckCircle } from 'lucide-react'
 
@@ -16,10 +17,15 @@ export default function ResetPasswordPage() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
 
-  const supabase = createClient()
+  const configured = isSupabaseConfigured()
+  const supabase = configured ? createClient() : null
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!supabase) {
+      setError('Password update is unavailable because Supabase is not configured.')
+      return
+    }
     if (!password || password !== confirm) return
     if (password.length < 8) {
       setError('Password must be at least 8 characters.')
@@ -101,10 +107,10 @@ export default function ResetPasswordPage() {
 
         <button
           type="submit"
-          disabled={loading || !password || !confirm || mismatch}
+          disabled={loading || !password || !confirm || mismatch || !configured}
           className={cn(
             'w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-medium transition-all',
-            password && confirm && !mismatch && !loading
+            password && confirm && !mismatch && !loading && configured
               ? 'bg-accent-purple text-white hover:bg-accent-purple/90'
               : 'bg-surface-2 text-white/20 cursor-not-allowed',
           )}

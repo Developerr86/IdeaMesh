@@ -1,0 +1,16 @@
+09:52:37.924 Running build in Washington, D.C., USA (East) – iad1
+09:52:37.928 Build machine configuration: 2 cores, 8 GB
+09:52:38.155 Cloning github.com/Developerr86/IdeaMesh (Branch: main, Commit: 2f1da76)
+09:52:38.738 Cloning completed: 583.000ms
+09:52:40.131 Restored build cache from previous deployment (6tkUDGaRGNb1wEG13XWyKhTjNvWz)
+09:52:40.705 Running "vercel build"
+09:52:40.727 Vercel CLI 54.9.0
+09:52:41.033 Installing dependencies...
+09:52:41.786 npm error code EBADPLATFORM
+09:52:41.787 npm error notsup Unsupported platform for @next/swc-win32-x64-msvc@16.2.6: wanted {"os":"win32","cpu":"x64"} (current: {"os":"linux","cpu":"x64"})
+09:52:41.787 npm error notsup Valid os:   win32
+09:52:41.787 npm error notsup Actual os:  linux
+09:52:41.787 npm error notsup Valid cpu:  x64
+09:52:41.788 npm error notsup Actual cpu: x64
+09:52:41.789 npm error A complete log of this run can be found in: /vercel/.npm/_logs/2026-06-09T04_22_41_202Z-debug-0.log
+09:52:42.241 Error: Command "npm install" exited with 1

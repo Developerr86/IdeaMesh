@@ -9,6 +9,7 @@ import {
   STAGES,
 } from '@/types/pipeline'
 import { createClient } from '@/lib/supabase/client'
+import { isSupabaseConfigured } from '@/lib/supabase/config'
 
 const DATA_PREFIX = 'ideamesh-data-'
 
@@ -78,6 +79,7 @@ interface PipelineStore {
 }
 
 async function getAuthUser() {
+  if (!isSupabaseConfigured()) return null
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   return user

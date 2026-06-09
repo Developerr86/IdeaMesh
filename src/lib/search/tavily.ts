@@ -1,42 +1,39 @@
-export interface TavilyResult {
-  title: string
-  url: string
-  content: string
-  score: number
+import type { SearchHit, SearchProvider } from './types'
+
+export const tavilyProvider: SearchProvider = {
+  name: 'tavily',
+
+  async search(query: string, maxResults = 5): Promise<SearchHit[]> {
+    const apiKey = process.env.TAVILY_API_KEY
+    if (!apiKey) {
+      throw new Error('TAVILY_API_KEY is not configured')
+    }
+
+    const postRes = await fetch('https://api.tavily.com/search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        api_key: apiKey,
+        query,
+        max_results: maxResults,
+        search_depth: 'basic',
+      }),
+      signal: AbortSignal.timeout(20_000),
+    })
+
+    if (!postRes.ok) {
+      throw new Error(`Tavily search failed: ${postRes.status}`)
+    }
+
+    const data = (await postRes.json()) as { results: Array<{ title: string; url: string; content: string; score?: number }> }
+    return data.results.map((r) => ({
+      title: r.title,
+      url: r.url,
+      content: r.content,
+      score: r.score,
+    }))
+  },
 }
 
-export interface TavilyResponse {
-  results: TavilyResult[]
-  answer?: string
-}
-
-export async function tavilySearch(query: string, maxResults = 5): Promise<TavilyResult[]> {
-  const res = await fetch('https://api.tavily.com/search', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      api_key: process.env.TAVILY_API_KEY,
-      query,
-      max_results: maxResults,
-      search_depth: 'advanced',
-    }),
-  })
-
-  if (!res.ok) {
-    throw new Error(`Tavily search failed: ${res.status}`)
-  }
-
-  const data: TavilyResponse = await res.json()
-  return data.results
-}
-
-export async function multiSearch(queries: string[]): Promise<TavilyResult[]> {
-  const results = await Promise.all(queries.map((q) => tavilySearch(q, 4)))
-  const flat = results.flat()
-  const seen = new Set<string>()
-  return flat.filter((r) => {
-    if (seen.has(r.url)) return false
-    seen.add(r.url)
-    return true
-  })
-}
+// Keep legacy export name for any external references
+export type TavilyResult = SearchHit

@@ -1,0 +1,95 @@
+I reviewed the Scout stage (the “search agent”) and rebuilt it around a pluggable search layer. Since IdeaMesh is Next.js/TypeScript, not Python, httpx doesn’t apply directly — the equivalent is native fetch with timeouts, retries, and page fetching.
+
+What was wrong before
+The Scout stage was locked to Tavily only (src/lib/search/tavily.ts):
+
+Required a paid TAVILY_API_KEY — no free fallback
+Raw fetch with no timeouts or retries
+Only search snippets (400 chars), no page content
+Hardcoded queries, no provider abstraction
+What’s new
+1. Pluggable search providers (src/lib/search/)
+File	Role
+types.ts
+Shared SearchHit / SearchProvider interface
+duckduckgo.ts
+Free search via duck-duck-scrape
+tavily.ts
+Refactored Tavily provider (with timeout)
+http.ts
+Fetch wrapper + page text extraction (httpx-like)
+index.ts
+Provider selection, multi-search, enrichment
+2. Provider selection (env-driven)
+SEARCH_PROVIDER=auto          # default: Tavily if key exists, else DuckDuckGo
+TAVILY_API_KEY=               # optional now
+SEARCH_ENRICH_PAGES=true      # fetch full page text for top 3 results
+auto — Tavily when TAVILY_API_KEY is set, otherwise DuckDuckGo (works without any API key)
+duckduckgo — free search only
+tavily — Tavily only
+Automatic Tavily → DuckDuckGo fallback if the primary provider fails
+3. Page fetching (your httpx idea)
+For the top 3 results, the agent now fetches the actual page HTML, extracts meta description + body text, and appends it to the LLM prompt. This gives much richer context than snippets alone. Includes SSRF protection (blocks localhost/private IPs).
+
+4. Smarter queries
+buildScoutQueries() now also uses brainstorm.coreValueProposition when available from the Mesh stage.
+
+5. More resilient search
+Promise.allSettled — one failed query doesn’t kill the whole run
+Dedup by URL, sort by relevance score
+20s timeout on Tavily, 12s on page fetches with retries
+How to use it
+Without Tavily (free):
+
+SEARCH_PROVIDER=duckduckgo
+# or just leave TAVILY_API_KEY empty with SEARCH_PROVIDER=auto
+With Tavily (better quality, paid):
+
+SEARCH_PROVIDER=auto
+TAVILY_API_KEY=tvly-...
+Scout works out of the box with DuckDuckGo — no search API key required. If you want, we can next wire LLM-generated search queries from brainstorm context, or pass full scout.results into the Compare stage (not just the summary).
+
+
+The project is running at http://localhost:3000.
+
+What I did to get it running
+Fixed corrupted SWC binaries — A clean node_modules reinstall was needed. The native @next/swc-win32-x64-msvc binary was invalid, which caused Turbopack/WASM errors.
+
+Switched dev to Webpack — Turbopack doesn't work on your machine without native SWC. Updated package.json:
+
+"dev": "next dev --webpack"
+Added local-dev mode without Supabase — Your .env has no Supabase keys, which crashed proxy.ts and UserMenu. The app now skips auth when Supabase isn't configured and uses localStorage for pipelines (as documented in context.md).
+
+DuckDuckGo rate-limit fix — DDG queries now run sequentially with a 400ms pause instead of all in parallel.
+
+Current status
+Check	Result
+Dev server
+Running on port 3000
+Landing page
+Loads correctly
+"Start ideation" button
+Works without sign-in (local mode)
+Scout search API
+Blocked — DuckDuckGo rate-limited this IP from test bursts
+Scout failed because there's no TAVILY_API_KEY and DuckDuckGo temporarily blocked requests (DDG detected an anomaly). That should clear after a cooldown, or you can add a Tavily key for more reliable search.
+
+To run it yourself
+npm run dev
+Then open http://localhost:3000, enter a title + description (>20 chars), and click Start ideation.
+
+Optional: improve reliability
+Add to .env.local:
+
+# Better search (recommended for Scout stage)
+TAVILY_API_KEY=tvly-...
+# Or force DuckDuckGo after rate limit clears
+SEARCH_PROVIDER=duckduckgo
+# Supabase (optional — enables sign-in + cloud save)
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+The dev server is running in the background. Want me to walk through the full pipeline to Scout once DuckDuckGo unblocks, or set up Tavily?
+
+Those earlier dev server starts stopped when the processes were killed to free port 3000 — that’s expected, not a new failure.
+
+The app is still running at http://localhost:3000 (responding with HTTP 200). Use npm run dev if you need to start it again later.

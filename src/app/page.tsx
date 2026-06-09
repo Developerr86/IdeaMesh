@@ -7,6 +7,7 @@ import { Sparkles, ArrowRight, Clock, Trash2, User, Briefcase, LogIn } from 'luc
 import { cn } from '@/lib/utils'
 import { STAGES } from '@/types/pipeline'
 import { createClient } from '@/lib/supabase/client'
+import { isSupabaseConfigured } from '@/lib/supabase/config'
 import { UserMenu } from '@/components/ui/UserMenu'
 import Link from 'next/link'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
@@ -191,10 +192,12 @@ export default function LandingPage() {
   const { savedPipelines, initPipeline, loadPipeline, deletePipeline, fetchSavedPipelines } =
     usePipelineStore()
   const router = useRouter()
-  const supabase = createClient()
   const { lines, removeLine } = useGridLines()
 
   useEffect(() => {
+    if (!isSupabaseConfigured()) return
+
+    const supabase = createClient()
     supabase.auth.getUser().then(({ data: { user } }) => {
       setUser(user)
       if (user) fetchSavedPipelines()
@@ -206,12 +209,12 @@ export default function LandingPage() {
     })
 
     return () => subscription.unsubscribe()
-  }, [])
+  }, [fetchSavedPipelines])
 
   const handleSubmit = async () => {
     if (!title.trim() || !description.trim()) return
 
-    if (!user) {
+    if (isSupabaseConfigured() && !user) {
       router.push('/auth/login?next=/')
       return
     }
@@ -325,13 +328,13 @@ export default function LandingPage() {
           >
             {isLoading
               ? 'Starting pipeline...'
-              : !user
+              : isSupabaseConfigured() && !user
                 ? 'Sign in to start'
                 : 'Start ideation'}
-            {!isLoading && (user ? <ArrowRight className="w-4 h-4" /> : <LogIn className="w-4 h-4" />)}
+            {!isLoading && (isSupabaseConfigured() && !user ? <LogIn className="w-4 h-4" /> : <ArrowRight className="w-4 h-4" />)}
           </button>
 
-          {!user && (
+          {isSupabaseConfigured() && !user && (
             <p className="text-center text-xs text-white/30">
               <Link href="/auth/login" className="text-accent-purple hover:text-accent-purple/80 transition-colors">
                 Sign in

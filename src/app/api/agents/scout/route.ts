@@ -1,6 +1,11 @@
 import { getAI, getModel } from '@/lib/ai/client'
 import { scoutSummaryPrompt } from '@/lib/ai/prompts'
-import { multiSearch } from '@/lib/search/tavily'
+import {
+  buildScoutQueries,
+  enrichHits,
+  formatHitsForPrompt,
+  multiSearchWithFallback,
+} from '@/lib/search'
 import { safeParseJSON } from '@/lib/utils'
 import { PipelineContext, ScoutOutput } from '@/types/pipeline'
 
@@ -16,21 +21,12 @@ export async function POST(req: Request) {
     }
 
     const { context } = body
-    const { title, description } = context.idea
+    const queries = buildScoutQueries(context)
+    const { hits: searchResults, providerName } = await multiSearchWithFallback(queries)
 
-    const queries = [
-      `${title} open source GitHub`,
-      `${title} Product Hunt`,
-      `${description.split(' ').slice(0, 6).join(' ')} software tool`,
-      `${title} alternative competitor`,
-    ]
-
-    const searchResults = await multiSearch(queries)
-
-    const rawText = searchResults
-      .slice(0, 10)
-      .map((r, i) => `[${i + 1}] ${r.title}\nURL: ${r.url}\n${r.content.slice(0, 400)}`)
-      .join('\n\n---\n\n')
+    console.info(`[scout] ${searchResults.length} hits via ${providerName} (${queries.length} queries)`)
+    const enriched = await enrichHits(searchResults)
+    const rawText = formatHitsForPrompt(enriched)
 
     const completion = await getAI().chat.completions.create({
       model: getModel(),

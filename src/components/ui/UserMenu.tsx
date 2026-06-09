@@ -4,19 +4,23 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { isSupabaseConfigured } from '@/lib/supabase/config'
 import { User, LogOut, UserCircle, ChevronDown, LogIn } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
 
 export function UserMenu() {
+  const configured = isSupabaseConfigured()
   const router = useRouter()
   const [user, setUser] = useState<SupabaseUser | null>(null)
   const [open, setOpen] = useState(false)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(configured)
   const menuRef = useRef<HTMLDivElement>(null)
-  const supabase = createClient()
 
   useEffect(() => {
+    if (!configured) return
+
+    const supabase = createClient()
     supabase.auth.getUser().then(({ data: { user } }) => {
       setUser(user)
       setLoading(false)
@@ -27,7 +31,7 @@ export function UserMenu() {
     })
 
     return () => subscription.unsubscribe()
-  }, [])
+  }, [configured])
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -40,11 +44,15 @@ export function UserMenu() {
   }, [])
 
   const handleSignOut = async () => {
+    if (!configured) return
     setOpen(false)
+    const supabase = createClient()
     await supabase.auth.signOut()
     router.push('/')
     router.refresh()
   }
+
+  if (!configured) return null
 
   if (loading) {
     return <div className="w-7 h-7 rounded-full bg-surface-2 animate-pulse" />

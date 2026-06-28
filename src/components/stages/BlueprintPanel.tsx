@@ -3,6 +3,9 @@
 import { BlueprintOutput } from '@/types/pipeline'
 import { AgentCard } from '@/components/ui/AgentCard'
 import { Tag } from '@/components/ui/Tag'
+import { Skeleton } from '@/components/ui/Skeleton'
+import { StreamContainer } from '@/components/ui/StreamContainer'
+import { StreamText, StreamBlock } from '@/components/ui/StreamText'
 import { Copy, Check, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useState } from 'react'
 
@@ -124,105 +127,146 @@ export function BlueprintPanel({ blueprint, isRunning, isError, errorMessage, on
         onRetry={onRetry}
       >
         {blueprint ? (
-          <div className="space-y-6">
+          <StreamContainer className="space-y-6">
             {/* Header */}
-            <div>
-              <h2 className="text-base font-semibold text-white mb-1">{blueprint.projectName}</h2>
-              <p className="text-sm text-white/60 leading-relaxed">{blueprint.elevatorPitch}</p>
+            <StreamBlock>
+              <h2 className="text-base font-semibold text-white mb-1"><StreamText>{blueprint.projectName}</StreamText></h2>
+              <p className="text-sm text-white/60 leading-relaxed"><StreamText>{blueprint.elevatorPitch}</StreamText></p>
               <div className="mt-2">
-                <Tag variant="amber">{blueprint.targetAudience}</Tag>
+                <Tag variant="amber"><StreamText>{blueprint.targetAudience}</StreamText></Tag>
               </div>
-            </div>
+            </StreamBlock>
 
             {/* MVP Features */}
-            <div>
+            <StreamBlock>
               <p className="text-xs font-medium text-white/40 mb-2 uppercase tracking-wider">MVP Features</p>
               <ul className="space-y-1.5">
                 {blueprint.mvpScope.map((f, i) => (
-                  <li key={i} className="text-xs text-white/60 flex gap-1.5">
-                    <span className="text-accent-amber">•</span>{f}
-                  </li>
+                  <StreamBlock key={i} as="li" className="text-xs text-white/60 flex gap-1.5">
+                    <span className="text-accent-amber">•</span><StreamText>{f}</StreamText>
+                  </StreamBlock>
                 ))}
               </ul>
-            </div>
+            </StreamBlock>
 
             {/* Tech Stack */}
-            <div>
+            <StreamBlock>
               <p className="text-xs font-medium text-white/40 mb-3 uppercase tracking-wider">Tech stack</p>
               <div className="space-y-2">
                 {Object.entries(blueprint.techStack).map(([layer, items]) => (
-                  <div key={layer} className="flex items-start gap-3">
+                  <StreamBlock key={layer} className="flex items-start gap-3">
                     <span className="text-[10px] text-white/30 uppercase tracking-wider w-20 flex-shrink-0 mt-0.5">
-                      {layer}
+                      <StreamText>{layer}</StreamText>
                     </span>
                     <div className="flex flex-wrap gap-1">
-                      {items.map((item, i) => <Tag key={i}>{item}</Tag>)}
+                      {items.map((item, i) => <Tag key={i}><StreamText>{item}</StreamText></Tag>)}
                     </div>
-                  </div>
+                  </StreamBlock>
                 ))}
               </div>
-            </div>
+            </StreamBlock>
 
             {/* MCP Servers */}
             {blueprint.mcpSuggestions.length > 0 && (
-              <div>
+              <StreamBlock>
                 <p className="text-xs font-medium text-white/40 mb-2 uppercase tracking-wider">MCP servers</p>
                 <div className="space-y-2">
                   {blueprint.mcpSuggestions.map((mcp, i) => (
-                    <div key={i} className="flex gap-3 p-2.5 bg-surface-2 rounded-lg border border-border">
+                    <StreamBlock key={i} className="flex gap-3 p-2.5 bg-surface-2 rounded-lg border border-border">
                       <div>
-                        <p className="text-xs font-medium text-white/80">{mcp.name}</p>
-                        <p className="text-xs text-white/40">{mcp.purpose}</p>
+                        <p className="text-xs font-medium text-white/80"><StreamText>{mcp.name}</StreamText></p>
+                        <p className="text-xs text-white/40"><StreamText>{mcp.purpose}</StreamText></p>
                       </div>
-                    </div>
+                    </StreamBlock>
                   ))}
                 </div>
-              </div>
+              </StreamBlock>
             )}
 
             {/* Build Phases */}
-            <div>
+            <StreamBlock>
               <p className="text-xs font-medium text-white/40 mb-3 uppercase tracking-wider">
-                Build phases · {blueprint.estimatedTimeline}
+                Build phases · <StreamText>{blueprint.estimatedTimeline}</StreamText>
               </p>
               <div className="space-y-3">
                 {blueprint.buildPhases.map((phase) => (
-                  <div key={phase.phase} className="border border-border rounded-lg overflow-hidden">
+                  <StreamBlock key={phase.phase} className="border border-border rounded-lg overflow-hidden">
                     <div className="flex items-center justify-between px-3 py-2 bg-surface-2">
                       <div className="flex items-center gap-2">
                         <span className="text-[10px] font-mono text-accent-amber">Phase {phase.phase}</span>
-                        <span className="text-xs font-medium text-white/80">{phase.name}</span>
+                        <span className="text-xs font-medium text-white/80"><StreamText>{phase.name}</StreamText></span>
                       </div>
-                      <span className="text-[10px] text-white/30">{phase.duration}</span>
+                      <span className="text-[10px] text-white/30"><StreamText>{phase.duration}</StreamText></span>
                     </div>
                     <div className="px-3 py-2.5">
                       <ul className="space-y-1 mb-2">
                         {phase.tasks.map((task, j) => (
                           <li key={j} className="text-xs text-white/50 flex gap-1.5">
-                            <span className="text-white/20">—</span>{task}
+                            <span className="text-white/20">—</span><StreamText>{task}</StreamText>
                           </li>
                         ))}
                       </ul>
-                      <p className="text-[10px] font-medium text-accent-teal">↳ {phase.deliverable}</p>
+                      <p className="text-[10px] font-medium text-accent-teal">↳ <StreamText>{phase.deliverable}</StreamText></p>
                     </div>
-                  </div>
+                  </StreamBlock>
                 ))}
               </div>
-            </div>
+            </StreamBlock>
 
             {/* Coding Agent Prompts — carousel */}
             {blueprint.codingAgentPrompts.length > 0 && (
-              <div>
+              <StreamBlock>
                 <p className="text-xs font-medium text-white/40 mb-3 uppercase tracking-wider">
                   Coding agent prompts
                 </p>
                 <AgentPromptCarousel prompts={blueprint.codingAgentPrompts} />
-              </div>
+              </StreamBlock>
             )}
-          </div>
+          </StreamContainer>
         ) : (
-          <div className="h-24 flex items-center justify-center">
-            <p className="text-xs text-white/20">Generating blueprint...</p>
+          <div className="space-y-8">
+            <div className="space-y-3">
+              <Skeleton className="h-6 w-48 mb-2" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-5/6" />
+              <Skeleton className="h-6 w-32 rounded-full mt-2" />
+            </div>
+
+            <div className="space-y-3">
+              <Skeleton className="h-3 w-32 mb-2" />
+              <Skeleton className="h-3 w-full" />
+              <Skeleton className="h-3 w-5/6" />
+              <Skeleton className="h-3 w-3/4" />
+              <Skeleton className="h-3 w-4/5" />
+            </div>
+
+            <div className="space-y-3">
+              <Skeleton className="h-3 w-24 mb-3" />
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="flex gap-4">
+                  <Skeleton className="h-3 w-20 flex-shrink-0" />
+                  <div className="flex gap-2 flex-wrap">
+                    <Skeleton className="h-5 w-16 rounded-md" />
+                    <Skeleton className="h-5 w-24 rounded-md" />
+                    <Skeleton className="h-5 w-20 rounded-md" />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="space-y-4">
+              <Skeleton className="h-3 w-40 mb-3" />
+              {[1, 2].map((i) => (
+                <div key={i} className="rounded-lg border border-border p-3">
+                  <div className="flex justify-between mb-3">
+                    <Skeleton className="h-3 w-32" />
+                    <Skeleton className="h-3 w-16" />
+                  </div>
+                  <Skeleton className="h-3 w-full mb-2" />
+                  <Skeleton className="h-3 w-5/6" />
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </AgentCard>

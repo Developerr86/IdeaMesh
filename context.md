@@ -1,332 +1,334 @@
-# IdeaMesh — Project Context
+# IdeaMesh - Project Context
 
 ## Purpose
-IdeaMesh is a **6-stage (plus optional pitch deck) AI ideation platform** with two distinguishing capabilities on top of the linear flow:
+IdeaMesh is a multi-agent AI ideation platform that turns a raw software idea into a structured plan. It runs a staged pipeline:
 
-1. **Copy-on-Write branching.** Any pipeline can be forked at any completed stage. The fork deep-copies the upstream state, resets downstream stages to `idle`, and is linked to the parent via `parentId`. The original timeline is preserved.
-2. **In-context refinement with a queued-notes workflow.** Any LLM-generated value (a weakness, an audience, a build phase, a slide bullet, …) can be wrapped as an editable region. The user queues feedback notes across the whole stage and proceeds with all of them in a single batch refinement call — which produces at most one fork.
+1. Seed
+2. Mesh
+3. Probe
+4. Scout
+5. Compare
+6. Blueprint
+7. Pitch Deck
 
-Users feed in a raw software idea (classified as personal or business) and the platform runs a multi-agent LLM pipeline to brainstorm, question, critique, research competitors, compare, generate a technical blueprint, and optionally produce a pitch deck.
+The platform has two core differentiators on top of the linear flow:
+
+1. Copy-on-write branching. Any pipeline can fork at a completed stage. The branch deep-copies upstream state, resets downstream stages to `idle`, and preserves the original timeline.
+2. In-context refinement with queued notes. Any generated block can be made editable. Notes are queued across a stage and then applied in one batch refinement call, producing at most one fork.
+
+Users provide a software idea as either personal or business. The app then runs brainstorming, clarification, critique, competitor research, comparison, technical synthesis, and optionally a pitch deck.
 
 ## Tech Stack
-- **Framework:** Next.js 16.2.6 (App Router, `next build` uses Turbopack)
-- **Language:** TypeScript 5.x
-- **UI Library:** React 19.2.4
-- **Styling:** Tailwind CSS 3.4.x (v3 NOT v4)
-- **Animations:** framer-motion 12.x
-- **Icons:** lucide-react 1.x
-- **AI SDK:** openai 6.x (note: v6 validates apiKey eagerly — use lazy client)
-- **State:** zustand 5.x with persist middleware
-- **Auth + DB:** `@supabase/ssr` 0.10.x + `@supabase/supabase-js` 2.x (Postgres + RLS)
-- **Fonts:** geist (via npm package, `--font-geist-sans` / `--font-geist-mono` CSS vars)
-- **Utilities:** clsx, tailwind-merge (wrapped as `cn()` in `lib/utils.ts`)
+- Framework: Next.js 16.2.6 with App Router
+- Runtime: Node.js server components and route handlers
+- Language: TypeScript 5
+- UI: React 19.2.4
+- Styling: Tailwind CSS 3.4.x
+- Motion: framer-motion 12.x
+- Icons: lucide-react 1.x
+- AI SDK: openai 6.x
+- State: zustand 5.x with persist middleware
+- Auth and DB: `@supabase/ssr` 0.10.x and `@supabase/supabase-js` 2.x
+- Utilities: clsx and tailwind-merge via `cn()`
+- Fonts: Geist
 
-## Architecture
+Notes:
+- `npm run dev` uses `next dev --webpack`.
+- `npm run build` uses `next build` and succeeds with the current Linux Vercel build setup.
+- Do not add platform-specific SWC packages to the root dependencies. Next already resolves the correct optional binary for the host platform.
 
-### Directory Structure
-```
+## Repository Layout
+```text
 src/
-  app/                          # Next.js App Router pages + API routes
-    (workspace)/                # Route group — all stage pages share a layout
-      blueprint/page.tsx        # Stage 6
-      compare/page.tsx          # Stage 5
-      mesh/page.tsx             # Stage 2
-      pitchdeck/page.tsx        # Stage 7 (business only)
-      probe/page.tsx            # Stage 3
-      scout/page.tsx            # Stage 4
-      layout.tsx                # Header + StageRail + EditPopover + RefinementQueueBar
+  app/
+    (workspace)/
+      layout.tsx
+      mesh/page.tsx
+      probe/page.tsx
+      scout/page.tsx
+      compare/page.tsx
+      blueprint/page.tsx
+      pitchdeck/page.tsx
     api/agents/
-      blueprint/route.ts
       brainstorm/route.ts
-      compare/route.ts
-      pitchdeck/route.ts
-      probe/route.ts
       qa/route.ts
+      probe/route.ts
       scout/route.ts
-      refine/route.ts           # Single-target refinement (kept for completeness; not in UI)
-      refine-batch/route.ts     # Batched refinement called by the queue bar
-    auth/                       # Supabase auth: login, signup, forgot/reset password, callback
-    profile/page.tsx            # Account + list of saved pipelines (roots only, branches nested)
-    layout.tsx                  # Root layout (Geist fonts, globals.css)
-    page.tsx                    # Landing page (idea input + saved ideas)
+      compare/route.ts
+      blueprint/route.ts
+      pitchdeck/route.ts
+      refine/route.ts
+      refine-batch/route.ts
+    auth/
+      login/page.tsx
+      signup/page.tsx
+      forgot-password/page.tsx
+      reset-password/page.tsx
+      callback/route.ts
+    profile/page.tsx
+    layout.tsx
+    page.tsx
   components/
-    pipeline/StageRail.tsx      # Tree-visualizer sidebar: active stages + sibling branch limbs
-    stages/                     # One panel component per stage
-    ui/
-      AgentCard.tsx             # Card chrome shared by all stages
-      EditableBlock.tsx         # Wraps any editable region; shows sticky notes
-      EditPopover.tsx           # Floating note composer
-      RefinementQueueBar.tsx    # Floating bottom bar driving the batched refine flow
-      StreamingText.tsx
-      Tag.tsx
-      UserMenu.tsx
+    pipeline/StageRail.tsx
+    stages/*.tsx
+    ui/AgentCard.tsx
+    ui/EditableBlock.tsx
+    ui/EditPopover.tsx
+    ui/RefinementQueueBar.tsx
+    ui/UserMenu.tsx
   lib/
-    ai/client.ts                # Lazy OpenAI client (getAI, getModel)
-    ai/prompts.ts               # All agent prompts + shared contextBlock
-    ai/stream.ts                # Streaming utilities
-    jsonPath.ts                 # parsePath / getAtPath / setAtPath (dotted + [index] only)
-    search/tavily.ts            # Tavily search client
-    supabase/client.ts          # createBrowserClient (used in store + client components)
-    supabase/server.ts          # async createServerClient (used in route handlers)
-    utils.ts                    # cn(), formatDuration(), safeParseJSON()
+    ai/client.ts
+    ai/prompts.ts
+    ai/stream.ts
+    jsonPath.ts
+    search/
+      index.ts
+      duckduckgo.ts
+      tavily.ts
+      http.ts
+      types.ts
+    supabase/
+      client.ts
+      server.ts
+      config.ts
+    utils.ts
   store/
-    pipelineStore.ts            # Zustand: active pipeline, savedPipelines, branching
-    editModeStore.ts            # Zustand: edit toggle, active popover target, refinement queue
-  types/pipeline.ts             # All shared types, StageId, StageConfig
-  proxy.ts                      # Next 16 proxy: session refresh + route protection
+    pipelineStore.ts
+    editModeStore.ts
+  types/pipeline.ts
+  proxy.ts
 ```
 
-### Pipeline Stages
-| # | Stage ID | Label | Accent | Agents |
-|---|----------|-------|--------|--------|
-| 1 | seed | Seed | white | Input |
-| 2 | mesh | Mesh | purple | Brainstorm, Q&A |
-| 3 | probe | Probe | coral | Pros/Cons, Critique |
-| 4 | scout | Scout | blue | Web Search (Tavily) |
-| 5 | compare | Compare | teal | Comparison |
-| 6 | blueprint | Blueprint | amber | Synthesis |
-| 7 | pitchdeck | Pitch Deck | green | Pitch Deck (business only) |
+## Pipeline Stages
+| # | Stage ID | Label | Purpose | Agents |
+|---|---|---|---|---|
+| 1 | `seed` | Seed | Capture the initial idea | Input |
+| 2 | `mesh` | Mesh | Expand and question the idea | Brainstorm, Q&A |
+| 3 | `probe` | Probe | Evaluate weaknesses and risks | Pros/Cons, Critique |
+| 4 | `scout` | Scout | Research competitors and similar tools | Web Search |
+| 5 | `compare` | Compare | Identify overlap and gaps | Comparison |
+| 6 | `blueprint` | Blueprint | Produce the build plan and coding guidance | Synthesis |
+| 7 | `pitchdeck` | Pitch Deck | Generate a short investor-style deck for business ideas | Pitch Deck |
 
-- Stage 7 (pitchdeck) is **hidden from StageRail** when `idea.type === 'personal'`
-- The "Continue to Pitch Deck" button on the blueprint page only appears for business ideas
+Pitch Deck is hidden for personal ideas in the StageRail and on stage navigation.
 
-### Data Flow
-1. **Landing page** (`/`): User enters title, description, and selects Personal/Business. `initPipeline()` creates a `PipelineState` (with `rootId = id`) and saves to Zustand + Supabase (or localStorage if unauthenticated).
-2. **Stage pages** auto-run on mount via `useEffect` (auto-runs once when `idle`).
-3. Each page calls its API route(s), receives JSON, calls `updateContext()` to store the result in Zustand, then calls `setStageStatus('done')`.
-4. `setStageStatus('done'/'error')` triggers `savePipeline()` — upserts the full pipeline to Supabase (or localStorage fallback).
-5. User navigates between stages via StageRail sidebar or "Continue to X" buttons. The StageRail also surfaces sibling branches and lets the user swap between them.
+## Data Flow
+1. The landing page collects title, description, and idea type.
+2. `initPipeline()` creates the initial `PipelineState`, marks Seed as done, and stores it in Zustand.
+3. Stage pages auto-run on mount when their status is `idle`.
+4. Each stage calls its route handler, parses JSON, updates `PipelineContext`, and marks the stage done or error.
+5. `setStageStatus('done' | 'error')` triggers persistence.
+6. The workspace layout and StageRail let the user move through stages or swap branches.
 
-### Branching model
-
+## Branching Model
 Every pipeline belongs to a tree:
 
-- `PipelineState.id` — unique per pipeline.
-- `PipelineState.rootId` — id of the topmost ancestor; equal to `id` for roots. **Denormalised** so queries like "show me all pipelines sharing my root" are a single indexed read.
-- `PipelineState.parentId` — direct parent (null for roots).
-- `PipelineState.branchName` — human-readable label shown in the StageRail's branch chip.
-- `PipelineState.forkedAtStage` — the spine stage at which the branch diverged.
+- `PipelineState.id`: unique pipeline id
+- `PipelineState.rootId`: topmost ancestor id, equal to `id` for a root pipeline
+- `PipelineState.parentId`: direct parent id, or `undefined` for roots
+- `PipelineState.branchName`: label shown in the StageRail
+- `PipelineState.forkedAtStage`: stage where the branch diverged
 
-`branchPipeline(targetStage, branchName?)` (in `pipelineStore.ts`):
+Branching behavior in `pipelineStore.ts`:
 
-1. Persists the parent first so the FK reference is valid.
-2. Deep-clones the context, **trimming downstream fields** (`prosCons`, `critique`, …) so a re-run actually regenerates them.
-3. Resets all stages strictly after `targetStage` to `idle`.
-4. Inserts the new branch row and swaps it in as the active pipeline.
+1. The current pipeline is saved first so the parent row exists before the branch is inserted.
+2. The new branch deep-clones the pipeline state.
+3. Downstream stages after the fork point are reset to `idle`.
+4. Downstream context keys are trimmed so reruns regenerate them instead of reusing stale output.
+5. The new branch is persisted and becomes active.
 
-`fetchBranches(rootId)` returns all rows with that `root_id`, used by `StageRail` to draw branch limbs and by future tree-view UIs.
+Saved pipeline browsing:
+- `fetchSavedPipelines()` returns only root pipelines for the main saved list.
+- `fetchBranches(rootId)` returns all pipelines sharing a root, used by the tree view.
+- Deleting a pipeline cascades to descendants in Supabase because the foreign key is `ON DELETE CASCADE`.
 
-`fetchSavedPipelines()` returns **only roots** (`parent_id IS NULL`) so the profile page's "Saved" list stays uncluttered; branches are accessed by entering a tree.
+## Refinement Workflow
+State lives in `src/store/editModeStore.ts` and supports:
 
-### Edit mode + refinement queue
-
-State lives in `src/store/editModeStore.ts`:
-
-```ts
-{
-  isEditMode: boolean
-  activeEdit: EditTarget | null      // currently open popover, or null
-  queue: QueuedRefinement[]          // pending feedback notes
-}
-```
+- `isEditMode`
+- `activeEdit`
+- `queue`
+- `enqueue()`
+- `removeFromQueue()`
+- `clearQueueFor()`
+- `rekeyQueueFor()`
 
 Flow:
 
-1. User toggles **Edit** in the workspace header.
-2. Any `<EditableBlock stage path label>` becomes a clickable target — dashed purple outline, pencil affordance on hover.
-3. Click opens `<EditPopover>` (single instance, portal-mounted from the workspace layout). The popover composes one feedback note targeting that specific JSON path.
-4. Submitting "Queue refinement" calls `enqueue({ pipelineId, stage, path, label, instruction })`. Enqueue **upserts by `(pipelineId, stage, path)`** so repeat clicks edit rather than duplicate.
-5. EditableBlock renders a `StickyNoteChip` under its children whenever a queue item matches its path — visible regardless of edit-mode so the user can browse with notes attached.
-6. `<RefinementQueueBar>` (floating bottom bar) appears whenever the active pipeline+stage has ≥1 queued item. It shows count, expand/collapse, per-item delete, clear-all, and the **Proceed with refinements** button.
-7. Proceed → inline confirm explaining `Fork & apply` vs `Apply` → on confirm:
-   1. If any downstream stage's status is `done` for the active stage → `branchPipeline(activeStage)` is called once. After fork, `rekeyQueueFor` rewrites every queue item's `pipelineId` to the new branch's id (so retry-after-failure works on the new branch).
-   2. `POST /api/agents/refine-batch` is called once with `fullContext + stage + refinements[]`.
-   3. The returned refinements are applied via `setAtPath` and committed with a single `updateContext` + `savePipeline`.
-   4. The queue for the active pipeline+stage is cleared.
+1. User enables Edit mode.
+2. Editable blocks become clickable.
+3. Clicking a block opens `EditPopover`.
+4. The note is queued, keyed by pipeline id, stage, and JSON path.
+5. `RefinementQueueBar` appears when there are queued items for the current stage.
+6. Proceeding applies all notes in one batch refine call.
+7. If downstream output already exists, the app forks once before applying refinements.
 
-If the batch refine fails after a fork, the user is left on the new branch with queue items still visible (thanks to the rekey) and can retry without producing a second fork.
+`/api/agents/refine-batch`:
+- Receives `fullContext`, `stage`, and an array of `{ targetPath, label, instruction }`
+- Looks up each path with `getAtPath`
+- Asks the model to rewrite all queued targets coherently
+- Validates that the returned values keep the same JSON shape
+- Rejects output if keys are added, removed, renamed, or if primitive types change
 
-### `/api/agents/refine-batch` contract
+Limits:
+- Max 50 refinements per batch
+- Max 2000 characters per instruction
 
-Request:
-```ts
-{
-  fullContext: PipelineContext
-  stage: StageId
-  refinements: Array<{ targetPath: string; label: string; instruction: string }>
-}
-```
+## Persistence
 
-Response:
-```ts
-{ refinements: Array<{ targetPath: string; value: unknown }> }
-```
+### Supabase path
+For authenticated users, pipeline state is stored in `public.pipelines` and profile data in `public.profiles`.
 
-Server-side responsibilities:
+Pipeline columns:
+- `id`
+- `user_id`
+- `title`
+- `idea_type`
+- `current_stage`
+- `stages`
+- `context`
+- `parent_id`
+- `root_id`
+- `branch_name`
+- `forked_at_stage`
+- `created_at`
+- `updated_at`
 
-- Resolve the current value at each `targetPath` via `getAtPath`.
-- Compute a `describeShape(currentValue)` description for each item.
-- Build a single prompt instructing the LLM to apply **all** notes coherently and emit `{"refinements":[{"key","value"}…]}`. Each item is given a stable `r1`, `r2`, … key so the response can be matched back to paths.
-- Validate each refined value with `sameShape(original, refined)`:
-  - primitives: same `typeof`
-  - arrays: must remain arrays
-  - objects: identical key sets (no add/remove/rename)
-- Reject the response with 502 if any item is missing or mismatched.
+### Local fallback
+If Supabase is not configured, the app runs in local mode:
 
-Limits: max 50 refinements per batch, max 2000 chars per instruction.
+- Pipeline state falls back to localStorage
+- Saved ideas still work locally
+- Auth pages and profile page degrade gracefully instead of throwing during build or render
 
-### Persistence
+`src/lib/supabase/config.ts` is the single source of truth for whether Supabase is configured. It checks:
 
-**Supabase (authenticated users):**
-- `public.profiles` — one row per auth user, auto-created via `on_auth_user_created` trigger.
-- `public.pipelines` — full pipeline state with RLS isolating rows per `user_id`. Columns:
-  - `id text PK`
-  - `user_id uuid REFERENCES auth.users`
-  - `title text`, `idea_type text`, `current_stage text`
-  - `stages jsonb`, `context jsonb`
-  - `parent_id text NULL REFERENCES pipelines(id) ON DELETE CASCADE`
-  - `root_id text NOT NULL` (indexed)
-  - `branch_name text NULL`
-  - `forked_at_stage text NULL`
-  - `created_at timestamptz`, `updated_at timestamptz`
-- Indexes: `pipelines_root_id_idx`, `pipelines_parent_id_idx`.
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 
-**Unauthenticated users** fall back to localStorage:
-- Zustand persist key: `ideamesh-pipeline` (current version `4`)
-- Pipeline data keys: `ideamesh-data-{id}` (full `PipelineState` JSON)
+The browser and server Supabase clients are only created when configuration is present.
 
-**Zustand persist migrations:** `migrate(persisted, version)` handles v→v+1 jumps. v4 backfills `rootId = id` for any in-flight pipeline that pre-dates branching.
+## Auth
+- Email/password and Google OAuth use Supabase Auth
+- `src/proxy.ts` replaces the deprecated `middleware.ts` style and handles session refresh plus route protection
+- Protected routes: `/mesh`, `/probe`, `/scout`, `/compare`, `/blueprint`, `/pitchdeck`, `/profile`
+- Auth pages: `/auth/login`, `/auth/signup`, `/auth/forgot-password`, `/auth/reset-password`, `/auth/callback`
+- When Supabase is configured, unauthenticated users are redirected to login for protected routes
+- When Supabase is not configured, the app stays in local mode and skips auth redirects
 
-### Auth
+## Search and Scout
+Scout uses a pluggable search layer in `src/lib/search/`.
 
-- Email/password + Google OAuth via Supabase Auth.
-- `src/proxy.ts` is the Next 16 proxy (replaces the deprecated `middleware.ts`). It refreshes the session cookie and protects workspace routes.
-- Auth pages: `/auth/login`, `/auth/signup`, `/auth/forgot-password`, `/auth/reset-password`, `/auth/callback`.
-- `<UserMenu>` in the workspace header and landing page surfaces sign-out + profile link.
-- Google OAuth requires manual configuration in the Supabase dashboard (Auth → Providers → Google). Site URL + redirect URLs must be configured per environment.
+Search providers:
+- `tavily`
+- `duckduckgo`
+- `auto`
 
-## Key Implementation Details
+Resolution rules:
+- `SEARCH_PROVIDER=tavily` forces Tavily
+- `SEARCH_PROVIDER=duckduckgo` forces DuckDuckGo
+- `SEARCH_PROVIDER=auto` prefers Tavily if `TAVILY_API_KEY` is present, otherwise DuckDuckGo
 
-### AI Client (`lib/ai/client.ts`)
-- Uses **lazy singleton** pattern — `getAI()` / `getModel()` check env vars at call time, not import time.
-- **Critical:** OpenAI SDK v6 eagerly validates `apiKey` in the constructor. Empty string throws. Always guard with env check.
-- Env vars: `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL`.
+DuckDuckGo behavior:
+- First attempt uses `duck-duck-scrape`
+- If that provider throws or returns no results, the code falls back to DuckDuckGo HTML or Lite endpoints
+- The HTML fallback uses browser-like headers and parses result links/snippets from returned markup
 
-### Prompts (`lib/ai/prompts.ts`)
-- `contextBlock(ctx)` generates a shared context string injected into every prompt.
-- Each prompt instructs the LLM to return valid JSON only (no markdown fences, no preamble).
-- `qaPrompt` is **idea-type-aware**: for personal ideas it replaces `business` with `usability`/`motivation` and forbids monetization questions.
-- `pitchDeckPrompt` generates 6–8 slides with layouts: `title-slide`, `bullets`, `two-column`, `centered`, `closing`.
-- `formatExpansions(ctx)` splits `brainstorm.expansions` into "user-selected (primary)" vs "other (de-emphasised)" sections based on `selectedExpansions`. If `selectedExpansions` is empty/undefined, all expansions are sent as primary (current default).
+Enrichment:
+- `SEARCH_ENRICH_PAGES=true` fetches the top results and appends extracted page text
+- Page fetches are time-limited and filtered to avoid obviously unsafe local/private URLs
 
-### `safeParseJSON` (`lib/utils.ts`)
-- Strips markdown code fences, then `JSON.parse`s. Extracts the outermost `{…}` / `[…]` block as a fallback for chatty models.
-- Used in every API route handler.
+Scout query generation:
+- Uses the idea title and description
+- Adds a query from `brainstorm.coreValueProposition` when available
 
-### `jsonPath` (`lib/jsonPath.ts`)
-- `parsePath('prosCons.cons[0]') → ['prosCons', 'cons', 0]`. Supports dotted keys + numeric brackets only — no wildcards, no quoted keys.
-- `getAtPath(root, path)` — safe traversal, returns `undefined` on miss.
-- `setAtPath(root, path, value)` — returns a new root with the value replaced. Each level is cloned (object spread / array slice) so React sees new references for changed branches; unchanged branches are structurally shared.
+## AI Client
+`src/lib/ai/client.ts` uses a lazy singleton pattern. This matters because OpenAI SDK v6 validates `apiKey` eagerly, so the client must not be constructed until a route handler actually needs it.
 
-### API Route Pattern
-Every agent route follows the same pattern:
-```typescript
-export const dynamic = 'force-dynamic'
-export const maxDuration = 60   // 90 for refine-batch
+Env vars:
+- `LLM_API_KEY`
+- `LLM_BASE_URL`
+- `LLM_MODEL`
 
-export async function POST(req: Request) {
-  try {
-    const { context } = await req.json()
-    const completion = await getAI().chat.completions.create({ ... })
-    const result = safeParseJSON<OutputType>(content, fallback)
-    return Response.json({ result })
-  } catch (err) {
-    return Response.json({ error: '...' }, { status: 500 })
-  }
-}
-```
+## Prompts
+`src/lib/ai/prompts.ts` defines the shared context block and every stage prompt.
 
-### Stage Page Pattern
-- Reads `pipeline`, `setStageStatus`, `setCurrentStage`, `updateContext` from the store.
-- `runStage()` callback: sets running, calls API, updates context, sets done.
-- `useEffect` auto-runs on mount when status is `idle`.
-- Renders the panel component + a "Continue to next" button when done.
-- Shows a "Re-run" button when done.
-- Redirects to `/` if no pipeline exists.
+Key behaviors:
+- Prompts return JSON only
+- Personal ideas are treated differently in Q&A and pitch deck generation
+- `selectedExpansions` from the Mesh stage are marked as primary in downstream prompts
+- Scout summaries consume formatted search hits and produce structured competitor results plus a narrative summary
 
-### `pipelineStore.ts`
-- `initPipeline(title, description, ideaType?)` — fresh pipeline, marks seed as done, **sets `rootId = id`**.
-- `setStageStatus(stage, status, error?)` — updates stage state, auto-saves on `done`/`error`.
-- `setCurrentStage(stage)` — just updates `currentStage`.
-- `updateContext(patch)` — merges partial context.
-- `branchPipeline(targetStage, branchName?)` — see the Branching model section.
-- `savePipeline()` / `loadPipeline(id)` / `deletePipeline(id)` — Supabase upsert/select/delete, with localStorage fallback for unauthenticated users.
-- `fetchSavedPipelines()` — roots only.
-- `fetchBranches(rootId)` — every pipeline sharing that root, ordered by `createdAt`.
+## Utilities
 
-### `editModeStore.ts`
-- `isEditMode`, `toggleEditMode()`, `setEditMode(on)`.
-- `activeEdit`, `openEdit(target)`, `closeEdit()` — drives the popover.
-- `queue`, `enqueue(item)` (upsert by `pipelineId+stage+path`), `removeFromQueue(id)`, `clearQueueFor(pipelineId, stage)`, `rekeyQueueFor(old, new, stage)`.
+### `safeParseJSON`
+`src/lib/utils.ts` strips fences, then parses JSON. If parsing fails, it tries to extract the outermost object or array from mixed content responses.
 
-### Types (`pipeline.ts`)
-- `PipelineContext`:
-  - `idea: { title, description, type }`
-  - `userAnswers`, `brainstorm`, **`selectedExpansions: string[]`** (Mesh opt-ins), `qa`,
-  - `prosCons`, `critique`, `scout`, `comparison`, `blueprint`, `pitchDeck`
-- `PipelineState`:
-  - `id`, `createdAt`, `currentStage`, `stages`, `context`
-  - **Branching:** `rootId` (required), `parentId?`, `branchName?`, `forkedAtStage?`
-- `StageId`: `'seed' | 'mesh' | 'probe' | 'scout' | 'compare' | 'blueprint' | 'pitchdeck'`
+### `jsonPath`
+`src/lib/jsonPath.ts` supports dotted keys and numeric array indices only. It is used by the refinement flow to read and write nested values safely.
 
-### Tree-visualizer StageRail
-- Spine = stages of the **active** pipeline, vertically (the "active path" is rendered prominently).
-- For each spine stage, sibling branches whose `forkedAtStage` equals that stage render as a dashed CSS-rounded elbow `┗` plus a chip showing branch name + current stage. Inactive branches are muted; hover lifts them.
-- "Original timeline" chip at the top of the rail jumps to the root (only shown when the active pipeline is a non-root branch).
-- "On branch" badge at the bottom shows the active branch's name + fork stage (non-root only).
-- Click any chip → `loadPipeline(id)` and route to that pipeline's `currentStage`.
+## Stage Pages
+Each stage page follows the same pattern:
 
-### Tailwind Theme
-- Dark theme only (surface colors: `#0a0a0a` base, `#111` surface-1, `#1a1a1a` surface-2, `#222` surface-3).
-- Accent colors: purple, teal, coral, blue, amber, green (each with a `-muted` variant at 12–15 % opacity).
-- Border colors: `rgba(255,255,255,0.08)` default, `0.05` subtle, `0.15` strong.
-- Custom animations: `fade-up` (8 px slide + opacity), `shimmer`, `cursor-blink`.
+1. Read pipeline state from the store.
+2. Auto-run when the stage is idle.
+3. Set stage status to running.
+4. Call the matching API route.
+5. Update context and stage status on success.
+6. Show retry controls on error.
 
-### Environment Variables (`.env.local`)
-```
+## StageRail
+The StageRail is the left-side tree visualizer:
+
+- Renders the active pipeline spine
+- Shows branch chips for sibling pipelines forked at each stage
+- Allows switching between branches
+- Includes an "Original timeline" action for returning to the root
+
+## Tailwind and UI
+- The app uses a dark, utility-first UI
+- Accent colors are purple, teal, coral, blue, amber, and green
+- Components use small radii and compact spacing
+- Page sections are framed by bands rather than nested cards
+
+## Environment Variables
+```env
 # LLM
-LLM_API_KEY=sk-...
-LLM_BASE_URL=https://api.openai.com/v1
-LLM_MODEL=gpt-4o
+LLM_API_KEY=
+LLM_BASE_URL=
+LLM_MODEL=
 
 # Web search
-TAVILY_API_KEY=tvly-...
+SEARCH_PROVIDER=auto
+TAVILY_API_KEY=
+SEARCH_ENRICH_PAGES=true
 
 # Supabase
-NEXT_PUBLIC_SUPABASE_URL=https://<project>.supabase.co
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+
+# App
+NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
 ## Important Gotchas
-- **Next.js 16 has breaking changes** — always check `node_modules/next/dist/docs/` before writing code.
-- **OpenAI SDK v6** — cannot instantiate `new OpenAI()` without a valid apiKey; use lazy `getAI()`.
-- **Tailwind v3** — NOT v4. Use `tailwind.config.ts`, NOT `@import "tailwindcss"` CSS syntax.
-- **All LLM responses must be parsed as JSON** — prompts explicitly forbid markdown fences, but `safeParseJSON` handles them anyway.
-- **Branching FK** — `pipelines.parent_id` uses `ON DELETE CASCADE`. Deleting a root deletes the entire subtree.
-- **Always save the parent before inserting a branch** — `branchPipeline` does this automatically; do not bypass it, or you will create dangling `parent_id` references.
-- **Backfill `rootId`** when adding new branching fields or migrating older pipelines: `loadPipeline` falls back to `rootId = id` for rows missing it.
-- **Persist version migrations:** when adding new fields to `PipelineState`, bump the Zustand `version` and add a `migrate(...)` clause that backfills sensible defaults.
-- **EditableBlock paths must be stable strings** — they're matched against queue items and the JSON schema. Use the literal path you want refinements to write to (e.g. `prosCons.cons[2]`).
-- **Refinement schema preservation** — the agent must return values of the same JSON shape. The server-side `sameShape` validator rejects key add/remove/rename and primitive type changes. Editable blocks targeting objects (e.g. a full `comparison.competitors[0]` object) must therefore be intentionally scoped — don't wrap something whose shape the model would naturally want to extend.
-- **StageRail** filters hidden stages with `hiddenStageIds` prop — new stages may need conditional visibility.
-- **lucide-react** icons — always import from the root `lucide-react` package.
-- **No setState-in-effect** — the project's ESLint config (React Compiler rules) bans synchronous `setState` calls inside `useEffect` bodies. Derive state via comparison + `useMemo` (see `MeshPanel`'s `isFullySaved` and the workspace layout's `isPersisted`) rather than reflecting prop changes into state.
-- **No ref reads during render** — the same lint config flags `ref.current` reads in render. Use `useState` for values that must drive render output.
+- Next.js 16 docs should be checked in `node_modules/next/dist/docs/` before changing route handlers or route segment config.
+- `serverExternalPackages` is available in `next.config.ts`, but platform-specific SWC binaries should not be added as root dependencies.
+- OpenAI client construction must stay lazy because SDK v6 validates envs immediately.
+- The app must keep working when Supabase is absent.
+- Search can fail transiently, so Scout has a provider fallback path.
+- Refinement output must preserve JSON shape.
+- The store backfills `rootId` for older pipelines.
+- `loadPipeline()` and `fetchSavedPipelines()` intentionally distinguish roots from branches.
 
-## Build & Lint
+## Build and Verification
 ```bash
-npm run build    # next build (Turbopack)
-npm run lint     # eslint
-npx tsc --noEmit # typecheck (no script alias, run directly)
+npm run build
+npm run lint
+npx tsc --noEmit
 ```
-All three must pass with zero errors before changes are considered complete.
+
+Current expectation:
+- `npm run build` must pass
+- `npm run lint` may still report existing warnings in unrelated files, but there should be no errors
+- `npx tsc --noEmit` must pass

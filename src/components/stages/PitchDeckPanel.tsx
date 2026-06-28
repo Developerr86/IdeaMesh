@@ -2,6 +2,9 @@
 
 import { PitchDeckOutput } from '@/types/pipeline'
 import { AgentCard } from '@/components/ui/AgentCard'
+import { Skeleton } from '@/components/ui/Skeleton'
+import { StreamContainer } from '@/components/ui/StreamContainer'
+import { StreamText, StreamBlock } from '@/components/ui/StreamText'
 import { cn } from '@/lib/utils'
 import { useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
@@ -17,9 +20,9 @@ interface PitchDeckPanelProps {
 function TitleSlide({ slide }: { slide: PitchDeckOutput['slides'][number] }) {
   return (
     <div className="flex flex-col items-center justify-center min-h-[400px] text-center px-8 py-16">
-      <h2 className="text-2xl font-semibold text-white mb-3">{slide.title}</h2>
+      <StreamBlock><h2 className="text-2xl font-semibold text-white mb-3"><StreamText>{slide.title}</StreamText></h2></StreamBlock>
       {slide.subtitle && (
-        <p className="text-sm text-white/50 max-w-md leading-relaxed">{slide.subtitle}</p>
+        <StreamBlock><p className="text-sm text-white/50 max-w-md leading-relaxed"><StreamText>{slide.subtitle}</StreamText></p></StreamBlock>
       )}
     </div>
   )
@@ -28,14 +31,14 @@ function TitleSlide({ slide }: { slide: PitchDeckOutput['slides'][number] }) {
 function BulletsSlide({ slide }: { slide: PitchDeckOutput['slides'][number] }) {
   return (
     <div className="px-6 py-8">
-      <h3 className="text-base font-semibold text-white mb-1">{slide.title}</h3>
-      {slide.subtitle && <p className="text-xs text-white/40 mb-4">{slide.subtitle}</p>}
+      <StreamBlock><h3 className="text-base font-semibold text-white mb-1"><StreamText>{slide.title}</StreamText></h3></StreamBlock>
+      {slide.subtitle && <StreamBlock><p className="text-xs text-white/40 mb-4"><StreamText>{slide.subtitle}</StreamText></p></StreamBlock>}
       <ul className="space-y-2.5">
         {slide.content.map((point, i) => (
-          <li key={i} className="flex gap-3 text-sm text-white/70 leading-relaxed">
+          <StreamBlock key={i} as="li" className="flex gap-3 text-sm text-white/70 leading-relaxed">
             <span className="text-accent-green mt-0.5 flex-shrink-0">→</span>
-            {point}
-          </li>
+            <StreamText>{point}</StreamText>
+          </StreamBlock>
         ))}
       </ul>
     </div>
@@ -46,23 +49,23 @@ function TwoColumnSlide({ slide }: { slide: PitchDeckOutput['slides'][number] })
   const mid = Math.ceil(slide.content.length / 2)
   return (
     <div className="px-6 py-8">
-      <h3 className="text-base font-semibold text-white mb-1">{slide.title}</h3>
-      {slide.subtitle && <p className="text-xs text-white/40 mb-4">{slide.subtitle}</p>}
+      <StreamBlock><h3 className="text-base font-semibold text-white mb-1"><StreamText>{slide.title}</StreamText></h3></StreamBlock>
+      {slide.subtitle && <StreamBlock><p className="text-xs text-white/40 mb-4"><StreamText>{slide.subtitle}</StreamText></p></StreamBlock>}
       <div className="grid grid-cols-2 gap-6">
         <ul className="space-y-2.5">
           {slide.content.slice(0, mid).map((point, i) => (
-            <li key={i} className="flex gap-2 text-sm text-white/70 leading-relaxed">
+            <StreamBlock key={i} as="li" className="flex gap-2 text-sm text-white/70 leading-relaxed">
               <span className="text-accent-green mt-0.5 flex-shrink-0">→</span>
-              {point}
-            </li>
+              <StreamText>{point}</StreamText>
+            </StreamBlock>
           ))}
         </ul>
         <ul className="space-y-2.5">
           {slide.content.slice(mid).map((point, i) => (
-            <li key={i} className="flex gap-2 text-sm text-white/70 leading-relaxed">
+            <StreamBlock key={i} as="li" className="flex gap-2 text-sm text-white/70 leading-relaxed">
               <span className="text-accent-green mt-0.5 flex-shrink-0">→</span>
-              {point}
-            </li>
+              <StreamText>{point}</StreamText>
+            </StreamBlock>
           ))}
         </ul>
       </div>
@@ -73,11 +76,11 @@ function TwoColumnSlide({ slide }: { slide: PitchDeckOutput['slides'][number] })
 function CenteredSlide({ slide }: { slide: PitchDeckOutput['slides'][number] }) {
   return (
     <div className="flex flex-col items-center justify-center min-h-[300px] text-center px-8 py-16">
-      <h3 className="text-lg font-semibold text-white mb-3">{slide.title}</h3>
-      {slide.subtitle && <p className="text-sm text-white/50 mb-4 max-w-sm">{slide.subtitle}</p>}
+      <StreamBlock><h3 className="text-lg font-semibold text-white mb-3"><StreamText>{slide.title}</StreamText></h3></StreamBlock>
+      {slide.subtitle && <StreamBlock><p className="text-sm text-white/50 mb-4 max-w-sm"><StreamText>{slide.subtitle}</StreamText></p></StreamBlock>}
       <div className="space-y-2 max-w-md">
         {slide.content.map((point, i) => (
-          <p key={i} className="text-sm text-white/70 leading-relaxed">{point}</p>
+          <StreamBlock key={i}><p className="text-sm text-white/70 leading-relaxed"><StreamText>{point}</StreamText></p></StreamBlock>
         ))}
       </div>
     </div>
@@ -87,12 +90,12 @@ function CenteredSlide({ slide }: { slide: PitchDeckOutput['slides'][number] }) 
 function ClosingSlide({ slide }: { slide: PitchDeckOutput['slides'][number] }) {
   return (
     <div className="flex flex-col items-center justify-center min-h-[400px] text-center px-8 py-16">
-      <h2 className="text-xl font-semibold text-white mb-3">{slide.title}</h2>
-      {slide.subtitle && <p className="text-sm text-white/50 max-w-md">{slide.subtitle}</p>}
+      <StreamBlock><h2 className="text-xl font-semibold text-white mb-3"><StreamText>{slide.title}</StreamText></h2></StreamBlock>
+      {slide.subtitle && <StreamBlock><p className="text-sm text-white/50 max-w-md"><StreamText>{slide.subtitle}</StreamText></p></StreamBlock>}
       {slide.content.length > 0 && (
         <div className="mt-6 space-y-2">
           {slide.content.map((point, i) => (
-            <p key={i} className="text-sm text-white/60">{point}</p>
+            <StreamBlock key={i}><p className="text-sm text-white/60"><StreamText>{point}</StreamText></p></StreamBlock>
           ))}
         </div>
       )}
@@ -139,8 +142,10 @@ export function PitchDeckPanel({ deck, isRunning, isError, errorMessage, onRetry
               <div className="flex-1 h-px bg-border" />
             </div>
 
-            {/* Slide content */}
-            <SlideComponent slide={slide} />
+            {/* Slide content wrapped in StreamContainer, keyed by slide index to restart animation */}
+            <StreamContainer key={currentSlide}>
+              <SlideComponent slide={slide} />
+            </StreamContainer>
 
             {/* Navigation */}
             <div className="flex items-center justify-between px-6 pb-4 pt-2">
@@ -183,8 +188,17 @@ export function PitchDeckPanel({ deck, isRunning, isError, errorMessage, onRetry
             </div>
           </div>
         ) : (
-          <div className="h-24 flex items-center justify-center">
-            <p className="text-xs text-white/20">Generating pitch deck...</p>
+          <div className="px-6 py-8">
+            <Skeleton className="h-6 w-1/3 mb-2" />
+            <Skeleton className="h-4 w-1/2 mb-8" />
+            <div className="space-y-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex gap-3">
+                  <Skeleton className="h-4 w-4 rounded-full flex-shrink-0" />
+                  <Skeleton className="h-4 w-5/6" />
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </AgentCard>

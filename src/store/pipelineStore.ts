@@ -391,8 +391,19 @@ export const usePipelineStore = create<PipelineStore>()(
       fetchBranches: async (rootId) => {
         const user = await getAuthUser()
         if (!user) {
-          // Local fallback: scan the in-memory savedPipelines list.
-          return get().savedPipelines.filter((p) => p.rootId === rootId)
+          // Local fallback: scan localStorage directly to find all pipelines sharing rootId
+          const metas: SavedPipelineMeta[] = []
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i)
+            if (!key?.startsWith(DATA_PREFIX)) continue
+            try {
+              const p: PipelineState = JSON.parse(localStorage.getItem(key)!)
+              if (p.rootId === rootId) {
+                metas.push(metaFromPipeline(p))
+              }
+            } catch { /* skip */ }
+          }
+          return metas.sort((a, b) => a.createdAt - b.createdAt)
         }
         const supabase = createClient()
         const { data } = await supabase

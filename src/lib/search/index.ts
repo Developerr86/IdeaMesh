@@ -25,10 +25,11 @@ export function getSearchProvider(): SearchProvider {
 
 export function buildScoutQueries(context: PipelineContext): string[] {
   const { title, description } = context.idea
+  const descString = description || title || ''
   const queries = [
     `${title} open source GitHub`,
     `${title} Product Hunt`,
-    `${description.split(' ').slice(0, 8).join(' ')} software tool`,
+    `${descString.split(' ').slice(0, 8).join(' ')} software tool`,
     `${title} alternative competitor`,
   ]
 
@@ -118,7 +119,7 @@ export async function multiSearchWithFallback(
   throw new Error('All search providers failed')
 }
 
-export async function enrichHits(hits: SearchHit[], limit = 3): Promise<SearchHit[]> {
+export async function enrichHits(hits: SearchHit[], limit = 5): Promise<SearchHit[]> {
   const enrichEnabled = process.env.SEARCH_ENRICH_PAGES !== 'false'
   if (!enrichEnabled || hits.length === 0) return hits
 
@@ -140,6 +141,6 @@ export async function enrichHits(hits: SearchHit[], limit = 3): Promise<SearchHi
 export function formatHitsForPrompt(hits: SearchHit[], limit = 10): string {
   return hits
     .slice(0, limit)
-    .map((r, i) => `[${i + 1}] ${r.title}\nURL: ${r.url}\n${r.content.slice(0, 600)}`)
+    .map((r, i) => `[${i + 1}] ${r.title}\nURL: ${r.url}\n${r.content}`)
     .join('\n\n---\n\n')
 }

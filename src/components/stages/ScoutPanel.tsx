@@ -3,6 +3,9 @@
 import { ScoutOutput } from '@/types/pipeline'
 import { AgentCard } from '@/components/ui/AgentCard'
 import { Tag } from '@/components/ui/Tag'
+import { Skeleton } from '@/components/ui/Skeleton'
+import { StreamContainer } from '@/components/ui/StreamContainer'
+import { StreamText, StreamBlock } from '@/components/ui/StreamText'
 import { ExternalLink, GitFork, Globe, MessageCircle } from 'lucide-react'
 
 interface ScoutPanelProps {
@@ -39,13 +42,15 @@ export function ScoutPanel({ scout, isRunning, isError, errorMessage, onRetry }:
         onRetry={onRetry}
       >
         {scout ? (
-          <div className="space-y-4">
-            <p className="text-sm text-white/70 leading-relaxed">{scout.summary}</p>
+          <StreamContainer className="space-y-4">
+            <StreamBlock>
+              <p className="text-sm text-white/70 leading-relaxed"><StreamText>{scout.summary}</StreamText></p>
+            </StreamBlock>
             <div className="space-y-2">
               {scout.results.map((result, i) => {
                 const Icon = SOURCE_ICONS[result.source] ?? Globe
                 return (
-                  <div
+                  <StreamBlock
                     key={i}
                     className="flex items-start gap-3 p-3 rounded-lg bg-surface-2 border border-border"
                   >
@@ -58,23 +63,40 @@ export function ScoutPanel({ scout, isRunning, isError, errorMessage, onRetry }:
                           rel="noopener noreferrer"
                           className="text-xs font-medium text-accent-blue hover:underline truncate"
                         >
-                          {result.title}
+                          <StreamText>{result.title}</StreamText>
                         </a>
                         <ExternalLink className="w-3 h-3 text-white/20 flex-shrink-0" />
                       </div>
-                      <p className="text-xs text-white/50 leading-relaxed">{result.description}</p>
+                      <p className="text-xs text-white/50 leading-relaxed"><StreamText>{result.description}</StreamText></p>
                       <div className="mt-1.5">
-                        <Tag variant={SOURCE_COLORS[result.source]}>{result.source}</Tag>
+                        <Tag variant={SOURCE_COLORS[result.source]}><StreamText>{result.source}</StreamText></Tag>
                       </div>
                     </div>
-                  </div>
+                  </StreamBlock>
                 )
               })}
             </div>
-          </div>
+          </StreamContainer>
         ) : (
-          <div className="h-24 flex items-center justify-center">
-            <p className="text-xs text-white/20">Searching the web...</p>
+          <div className="space-y-5">
+            <div className="space-y-1.5">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-11/12" />
+              <Skeleton className="h-4 w-4/5" />
+            </div>
+            <div className="space-y-2">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex gap-3 p-3 rounded-lg bg-surface-2 border border-border">
+                  <Skeleton className="w-4 h-4 rounded mt-0.5" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-3 w-full" />
+                    <Skeleton className="h-3 w-5/6" />
+                    <Skeleton className="h-5 w-20 rounded-full" />
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </AgentCard>

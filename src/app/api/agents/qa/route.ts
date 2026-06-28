@@ -20,7 +20,7 @@ export async function POST(req: Request) {
       model: getModel(),
       messages: [{ role: 'user', content: qaPrompt(context) }],
       temperature: 0.7,
-      max_tokens: 800,
+      max_tokens: 1500,
     })
 
     const raw = completion.choices[0]?.message?.content ?? ''

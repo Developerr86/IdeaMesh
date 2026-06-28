@@ -72,7 +72,7 @@ export interface BrainstormOutput {
 export interface QAOutput {
   questions: Array<{
     question: string
-    category: 'scope' | 'audience' | 'technical' | 'business' | 'differentiation'
+    category: 'scope' | 'audience' | 'technical' | 'business' | 'differentiation' | 'usability' | 'motivation'
     options: string[]
   }>
 }

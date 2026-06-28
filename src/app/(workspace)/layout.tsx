@@ -158,7 +158,7 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
         </aside>
 
         <main className="flex-1 overflow-hidden relative">
-          <AnimatePresence custom={direction} mode="sync" initial={false}>
+          <AnimatePresence custom={direction} mode="wait" initial={false}>
             <motion.div
               key={pathname}
               custom={direction}

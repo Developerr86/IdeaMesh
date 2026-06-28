@@ -4,6 +4,9 @@ import { BrainstormOutput, QAOutput, UserAnswers } from '@/types/pipeline'
 import { AgentCard } from '@/components/ui/AgentCard'
 import { Tag } from '@/components/ui/Tag'
 import { EditableBlock } from '@/components/ui/EditableBlock'
+import { Skeleton } from '@/components/ui/Skeleton'
+import { StreamContainer } from '@/components/ui/StreamContainer'
+import { StreamText, StreamBlock } from '@/components/ui/StreamText'
 import { useState, useMemo } from 'react'
 import { ChevronRight, ArrowLeft, RefreshCw, Check, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -69,8 +72,17 @@ export function MeshPanel({
 
   const saveState: SaveState = isSaving ? 'saving' : isFullySaved ? 'saved' : 'idle'
 
-  function selectOption(question: string, option: string) {
-    setLocalAnswers((prev) => ({ ...prev, [question]: option }))
+  function toggleOption(question: string, option: string) {
+    setLocalAnswers((prev) => {
+      const current = prev[question] || ''
+      let options = current.split(', ').filter(Boolean)
+      if (options.includes(option)) {
+        options = options.filter(o => o !== option)
+      } else {
+        options.push(option)
+      }
+      return { ...prev, [question]: options.join(', ') }
+    })
     setCustomMode(false)
   }
 
@@ -112,8 +124,8 @@ export function MeshPanel({
           onRetry={onRetry}
         >
           {brainstorm ? (
-            <div className="space-y-4">
-              <div>
+            <StreamContainer className="space-y-4">
+              <StreamBlock>
                 <p className="text-xs font-medium text-white/40 mb-2 uppercase tracking-wider">Core value</p>
                 <EditableBlock
                   stage="mesh"
@@ -121,11 +133,13 @@ export function MeshPanel({
                   label="Core value"
                   variant="block"
                 >
-                  <p className="text-sm text-white/80 leading-relaxed">{brainstorm.coreValueProposition}</p>
+                  <p className="text-sm text-white/80 leading-relaxed">
+                    <StreamText>{brainstorm.coreValueProposition}</StreamText>
+                  </p>
                 </EditableBlock>
-              </div>
+              </StreamBlock>
 
-              <div>
+              <StreamBlock>
                 <div className="flex items-baseline justify-between mb-2">
                   <p className="text-xs font-medium text-white/40 uppercase tracking-wider">Expansions</p>
                   <p className="text-[10px] text-white/25">
@@ -136,7 +150,7 @@ export function MeshPanel({
                   {brainstorm.expansions.map((e, i) => {
                     const isSelected = selectedSet.has(e)
                     return (
-                      <li key={i}>
+                      <StreamBlock key={i} as="li">
                         <button
                           type="button"
                           onClick={() => onToggleExpansion(e)}
@@ -158,15 +172,15 @@ export function MeshPanel({
                           >
                             <Check className="w-2.5 h-2.5" strokeWidth={3} />
                           </span>
-                          <span className="text-sm leading-snug">{e}</span>
+                          <span className="text-sm leading-snug"><StreamText>{e}</StreamText></span>
                         </button>
-                      </li>
+                      </StreamBlock>
                     )
                   })}
                 </ul>
-              </div>
+              </StreamBlock>
 
-              <div>
+              <StreamBlock>
                 <p className="text-xs font-medium text-white/40 mb-2 uppercase tracking-wider">Target audiences</p>
                 <div className="flex flex-wrap gap-1.5">
                   {brainstorm.targetAudiences.map((a, i) => (
@@ -177,25 +191,27 @@ export function MeshPanel({
                       label={`Audience #${i + 1}`}
                       variant="inline"
                     >
-                      <Tag variant="purple">{a}</Tag>
+                      <Tag variant="purple"><StreamText>{a}</StreamText></Tag>
                     </EditableBlock>
                   ))}
                 </div>
-              </div>
+              </StreamBlock>
 
               {/* Q&A transition — only show button when we have actual questions */}
               {qa && hasQuestions && (
-                <button
-                  onClick={() => setPhase('qna')}
-                  className="flex items-center gap-1.5 text-xs font-medium text-accent-purple hover:text-accent-purple/80 transition-colors pt-2"
-                >
-                  Proceed to Q&A Agent <ChevronRight className="w-3 h-3" />
-                </button>
+                <StreamBlock>
+                  <button
+                    onClick={() => setPhase('qna')}
+                    className="flex items-center gap-1.5 text-xs font-medium text-accent-purple hover:text-accent-purple/80 transition-colors pt-2"
+                  >
+                    Proceed to Q&A Agent <ChevronRight className="w-3 h-3" />
+                  </button>
+                </StreamBlock>
               )}
 
               {/* Q&A returned no questions — let user re-run or skip */}
               {qa && !hasQuestions && (
-                <div className="flex items-center gap-4 pt-2">
+                <StreamBlock className="flex items-center gap-4 pt-2">
                   <span className="text-xs text-white/25">Q&A returned no questions.</span>
                   {onRetry && (
                     <button
@@ -212,12 +228,34 @@ export function MeshPanel({
                   >
                     Skip to Probe <ChevronRight className="w-3 h-3" />
                   </button>
-                </div>
+                </StreamBlock>
               )}
-            </div>
+            </StreamContainer>
           ) : (
-            <div className="h-24 flex items-center justify-center">
-              <p className="text-xs text-white/20">Running brainstorm...</p>
+            <div className="space-y-6">
+              <div>
+                <Skeleton className="h-3 w-20 mb-2" />
+                <Skeleton className="h-14 w-full" />
+              </div>
+              <div>
+                <div className="flex items-baseline justify-between mb-2">
+                  <Skeleton className="h-3 w-24" />
+                  <Skeleton className="h-3 w-32" />
+                </div>
+                <div className="space-y-1.5">
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
+              </div>
+              <div>
+                <Skeleton className="h-3 w-32 mb-2" />
+                <div className="flex gap-2">
+                  <Skeleton className="h-6 w-20" />
+                  <Skeleton className="h-6 w-24" />
+                  <Skeleton className="h-6 w-16" />
+                </div>
+              </div>
             </div>
           )}
         </AgentCard>
@@ -225,9 +263,9 @@ export function MeshPanel({
 
       {phase === 'qna' && qa && currentQuestion && (
         <AgentCard agentName="Q&A Agent" accentColor="text-accent-purple">
-          <div className="space-y-5">
+          <StreamContainer className="space-y-5">
             {/* Progress indicator */}
-            <div className="flex items-center gap-2">
+            <StreamBlock className="flex items-center gap-2">
               <span className="text-[10px] font-mono text-white/30">
                 {currentIndex + 1} / {totalQuestions}
               </span>
@@ -237,45 +275,58 @@ export function MeshPanel({
                   style={{ width: `${((currentIndex + 1) / totalQuestions) * 100}%` }}
                 />
               </div>
-            </div>
+            </StreamBlock>
 
             {/* Category tag */}
-            <div className="flex items-center gap-2">
-              <Tag variant="purple">{currentQuestion.category}</Tag>
-            </div>
+            <StreamBlock className="flex items-center gap-2">
+              <Tag variant="purple"><StreamText>{currentQuestion.category}</StreamText></Tag>
+            </StreamBlock>
 
             {/* Question */}
-            <div>
+            <StreamBlock>
               <p className="text-sm text-white/90 font-medium leading-relaxed">
-                {currentQuestion.question}
+                <StreamText>{currentQuestion.question}</StreamText>
               </p>
-            </div>
+            </StreamBlock>
 
             {/* Suggested options */}
             {currentQuestion.options && currentQuestion.options.length > 0 && (
               <div className="space-y-1.5">
                 {currentQuestion.options.map((option, i) => {
-                  const selected = localAnswers[currentQuestion.question] === option && !customMode
+                  const currentAnswer = localAnswers[currentQuestion.question] || ''
+                  const selectedOptions = currentAnswer.split(', ').filter(Boolean)
+                  const selected = selectedOptions.includes(option) && !customMode
                   return (
-                    <button
-                      key={i}
-                      onClick={() => selectOption(currentQuestion.question, option)}
-                      className={cn(
-                        'w-full text-left px-3 py-2.5 rounded-lg text-xs border transition-all',
-                        selected
-                          ? 'bg-accent-purple-muted border-accent-purple/30 text-white'
-                          : 'bg-surface-2 border-border text-white/60 hover:border-white/20',
-                      )}
-                    >
-                      {option}
-                    </button>
+                    <StreamBlock key={i}>
+                      <button
+                        onClick={() => toggleOption(currentQuestion.question, option)}
+                        className={cn(
+                          'w-full text-left flex items-start gap-2.5 px-3 py-2.5 rounded-lg text-xs border transition-all',
+                          selected
+                            ? 'bg-accent-purple-muted border-accent-purple/30 text-white'
+                            : 'bg-surface-2 border-border text-white/60 hover:border-white/20',
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            'mt-0.5 flex-shrink-0 w-3.5 h-3.5 rounded border flex items-center justify-center transition-colors',
+                            selected
+                              ? 'border-accent-purple bg-accent-purple text-white'
+                              : 'border-white/20 bg-transparent text-transparent',
+                          )}
+                        >
+                          <Check className="w-2.5 h-2.5" strokeWidth={3} />
+                        </span>
+                        <span className="leading-snug"><StreamText>{option}</StreamText></span>
+                      </button>
+                    </StreamBlock>
                   )
                 })}
               </div>
             )}
 
             {/* Custom answer toggle */}
-            <div>
+            <StreamBlock>
               <button
                 onClick={() => setCustomMode(!customMode)}
                 className="text-xs text-white/30 hover:text-white/50 transition-colors"
@@ -292,10 +343,10 @@ export function MeshPanel({
                   onChange={(e) => setCustomAnswer(currentQuestion.question, e.target.value)}
                 />
               )}
-            </div>
+            </StreamBlock>
 
             {/* Navigation buttons */}
-            <div className="flex items-center justify-between pt-2">
+            <StreamBlock className="flex items-center justify-between pt-2">
               <button
                 onClick={prevQuestion}
                 disabled={currentIndex === 0}
@@ -323,15 +374,27 @@ export function MeshPanel({
                   <ChevronRight className="w-3 h-3" />
                 </button>
               )}
-            </div>
-          </div>
+            </StreamBlock>
+          </StreamContainer>
         </AgentCard>
       )}
 
       {phase === 'qna' && !qa && (
         <AgentCard agentName="Q&A Agent" accentColor="text-accent-purple" isRunning={isRunning}>
-          <div className="h-24 flex items-center justify-center">
-            <p className="text-xs text-white/20">Generating questions...</p>
+          <div className="space-y-5">
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-2 w-8" />
+              <Skeleton className="h-0.5 flex-1" />
+            </div>
+            <Skeleton className="h-5 w-24" />
+            <Skeleton className="h-10 w-full" />
+            <div className="space-y-1.5">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+            <Skeleton className="h-3 w-32" />
           </div>
         </AgentCard>
       )}

@@ -348,13 +348,13 @@ export default function LandingPage() {
           )}
         </div>
 
-        {user && savedPipelines.length > 0 && (
+        {(!isSupabaseConfigured() || user) && savedPipelines.length > 0 && (
           <div className="w-full max-w-lg mt-12">
             <div className="flex items-center gap-2 mb-4">
               <Clock className="w-3.5 h-3.5 text-white/30" />
               <h2 className="text-xs font-medium text-white/40 uppercase tracking-wider">Saved ideas</h2>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2 max-h-[145px] overflow-y-auto pr-1">
               {savedPipelines.map((s) => (
                 <div
                   key={s.id}

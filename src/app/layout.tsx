@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { GeistSans } from 'geist/font/sans'
 import { GeistMono } from 'geist/font/mono'
 import './globals.css'
+import { RouteTransitionProvider } from '@/components/ui/RouteTransition'
 
 export const metadata: Metadata = {
   title: 'IdeaMesh',
@@ -16,7 +17,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${GeistSans.variable} ${GeistMono.variable}`}>
       <body className="font-sans bg-surface min-h-screen">
-        {children}
+        <RouteTransitionProvider>{children}</RouteTransitionProvider>
       </body>
     </html>
   )

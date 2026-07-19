@@ -22,7 +22,7 @@ const STATUS_ICONS = {
 }
 
 const STAGE_ROUTES: Record<StageId, string> = {
-  seed: '/',
+  seed: '/seed',
   mesh: '/mesh',
   probe: '/probe',
   scout: '/scout',

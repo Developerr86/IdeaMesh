@@ -22,7 +22,7 @@ const slideVariants = {
 }
 
 const STAGE_ROUTES: Record<StageId, string> = {
-  seed: '/',
+  seed: '/seed',
   mesh: '/mesh',
   probe: '/probe',
   scout: '/scout',

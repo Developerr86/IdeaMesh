@@ -7,9 +7,11 @@ import { Skeleton } from '@/components/ui/Skeleton'
 import { StreamContainer } from '@/components/ui/StreamContainer'
 import { StreamText, StreamBlock } from '@/components/ui/StreamText'
 import { ExternalLink, GitFork, Globe, MessageCircle } from 'lucide-react'
+import { AgentAction } from '@/lib/stream'
 
 interface ScoutPanelProps {
   scout?: ScoutOutput
+  scoutActions?: AgentAction[]
   isRunning: boolean
   isError?: boolean
   errorMessage?: string
@@ -30,7 +32,7 @@ const SOURCE_COLORS = {
   web: 'default' as const,
 }
 
-export function ScoutPanel({ scout, isRunning, isError, errorMessage, onRetry }: ScoutPanelProps) {
+export function ScoutPanel({ scout, scoutActions, isRunning, isError, errorMessage, onRetry }: ScoutPanelProps) {
   return (
     <div className="space-y-4">
       <AgentCard
@@ -40,6 +42,7 @@ export function ScoutPanel({ scout, isRunning, isError, errorMessage, onRetry }:
         isError={isError}
         errorMessage={errorMessage}
         onRetry={onRetry}
+        actions={scoutActions}
       >
         {scout ? (
           <StreamContainer className="space-y-4">

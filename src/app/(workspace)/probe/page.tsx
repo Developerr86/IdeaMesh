@@ -6,12 +6,15 @@ import { usePipelineStore } from '@/store/pipelineStore'
 import { ProbePanel } from '@/components/stages/ProbePanel'
 import { ProsConsOutput, CritiqueOutput } from '@/types/pipeline'
 import { ChevronRight, RefreshCw } from 'lucide-react'
+import { useAgentStream } from '@/hooks/useAgentStream'
 
 export default function ProbePage() {
   const { pipeline, setStageStatus, setCurrentStage, updateContext } = usePipelineStore()
   const router = useRouter()
-  const [isRunning, setIsRunning] = useState(false)
-  const [error, setError] = useState<string | undefined>()
+  const probeStream = useAgentStream<{ prosCons: ProsConsOutput; critique: CritiqueOutput }>()
+  
+  const isRunning = probeStream.isRunning
+  const error = probeStream.error
 
   const ctx = pipeline?.context
   const stageStatus = pipeline?.stages.probe.status
@@ -25,34 +28,28 @@ export default function ProbePage() {
 
   const runProbe = useCallback(async () => {
     if (!pipeline) return
-    setIsRunning(true)
-    setError(undefined)
     setStageStatus('probe', 'running')
     setCurrentStage('probe')
 
+    probeStream.reset()
+
     try {
-      const res = await fetch('/api/agents/probe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ context: pipeline.context }),
-      })
-
-      const data = await res.json()
-      if (data.error) throw new Error(data.error)
-
-      updateContext({
-        prosCons: data.prosCons as ProsConsOutput,
-        critique: data.critique as CritiqueOutput,
-      })
-      setStageStatus('probe', 'done')
+      await probeStream.runStream(
+        '/api/agents/probe',
+        { context: pipeline.context },
+        (res) => {
+          updateContext({
+            prosCons: res.prosCons,
+            critique: res.critique,
+          })
+          setStageStatus('probe', 'done')
+        }
+      )
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Probe stage failed'
-      setError(message)
       setStageStatus('probe', 'error', message)
-    } finally {
-      setIsRunning(false)
     }
-  }, [pipeline, setStageStatus, setCurrentStage, updateContext])
+  }, [pipeline, setStageStatus, setCurrentStage, updateContext, probeStream])
 
   useEffect(() => {
     if (!pipeline || stageStatus === 'done' || stageStatus === 'running') return
@@ -84,6 +81,8 @@ export default function ProbePage() {
       <ProbePanel
         prosCons={ctx?.prosCons}
         critique={ctx?.critique}
+        prosConsActions={probeStream.actions}
+        critiqueActions={probeStream.actions}
         isRunning={isRunning}
         isError={stageStatus === 'error'}
         errorMessage={error}

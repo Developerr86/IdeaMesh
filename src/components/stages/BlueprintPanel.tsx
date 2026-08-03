@@ -8,9 +8,11 @@ import { StreamContainer } from '@/components/ui/StreamContainer'
 import { StreamText, StreamBlock } from '@/components/ui/StreamText'
 import { Copy, Check, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useState } from 'react'
+import { AgentAction } from '@/lib/stream'
 
 interface BlueprintPanelProps {
   blueprint?: BlueprintOutput
+  blueprintActions?: AgentAction[]
   isRunning: boolean
   isError?: boolean
   errorMessage?: string
@@ -113,7 +115,7 @@ function AgentPromptCarousel({ prompts }: { prompts: BlueprintOutput['codingAgen
   )
 }
 
-export function BlueprintPanel({ blueprint, isRunning, isError, errorMessage, onRetry }: BlueprintPanelProps) {
+export function BlueprintPanel({ blueprint, blueprintActions, isRunning, isError, errorMessage, onRetry }: BlueprintPanelProps) {
   if (!blueprint && !isRunning && !isError) return null
 
   return (
@@ -125,6 +127,7 @@ export function BlueprintPanel({ blueprint, isRunning, isError, errorMessage, on
         isError={isError}
         errorMessage={errorMessage}
         onRetry={onRetry}
+        actions={blueprintActions}
       >
         {blueprint ? (
           <StreamContainer className="space-y-6">

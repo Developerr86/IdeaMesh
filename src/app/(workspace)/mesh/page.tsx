@@ -6,12 +6,16 @@ import { usePipelineStore } from '@/store/pipelineStore'
 import { MeshPanel } from '@/components/stages/MeshPanel'
 import { UserAnswers, BrainstormOutput, QAOutput } from '@/types/pipeline'
 import { ChevronRight, RefreshCw } from 'lucide-react'
+import { useAgentStream } from '@/hooks/useAgentStream'
 
 export default function MeshPage() {
   const { pipeline, setStageStatus, setCurrentStage, updateContext, savePipeline } = usePipelineStore()
   const router = useRouter()
-  const [isRunning, setIsRunning] = useState(false)
-  const [error, setError] = useState<string | undefined>()
+  const brainstormStream = useAgentStream<BrainstormOutput>()
+  const qaStream = useAgentStream<QAOutput>()
+  
+  const isRunning = brainstormStream.isRunning || qaStream.isRunning
+  const error = brainstormStream.error || qaStream.error
 
   const ctx = pipeline?.context
   const stageStatus = pipeline?.stages.mesh.status
@@ -25,46 +29,41 @@ export default function MeshPage() {
 
   const runMesh = useCallback(async () => {
     if (!pipeline) return
-    setIsRunning(true)
-    setError(undefined)
     setStageStatus('mesh', 'running')
     setCurrentStage('mesh')
+    
+    brainstormStream.reset()
+    qaStream.reset()
 
     try {
-      const [brainstormRes, qaRes] = await Promise.all([
-        fetch('/api/agents/brainstorm', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ context: pipeline.context }),
-        }),
-        fetch('/api/agents/qa', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ context: pipeline.context }),
-        }),
+      let bData: BrainstormOutput | undefined
+      let qData: QAOutput | undefined
+
+      await Promise.all([
+        brainstormStream.runStream(
+          '/api/agents/brainstorm',
+          { context: pipeline.context },
+          (res) => { bData = res }
+        ),
+        qaStream.runStream(
+          '/api/agents/qa',
+          { context: pipeline.context },
+          (res) => { qData = res }
+        )
       ])
 
-      const [brainstormData, qaData] = await Promise.all([
-        brainstormRes.json(),
-        qaRes.json(),
-      ])
-
-      if (brainstormData.error) throw new Error(brainstormData.error)
-      if (qaData.error) throw new Error(qaData.error)
-
-      updateContext({
-        brainstorm: brainstormData.result as BrainstormOutput,
-        qa: qaData.result as QAOutput,
-      })
-      setStageStatus('mesh', 'done')
+      if (bData && qData) {
+        updateContext({
+          brainstorm: bData,
+          qa: qData,
+        })
+        setStageStatus('mesh', 'done')
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Mesh stage failed'
-      setError(message)
       setStageStatus('mesh', 'error', message)
-    } finally {
-      setIsRunning(false)
     }
-  }, [pipeline, setStageStatus, setCurrentStage, updateContext])
+  }, [pipeline, setStageStatus, setCurrentStage, updateContext, brainstormStream, qaStream])
 
   useEffect(() => {
     if (!pipeline || stageStatus === 'done' || stageStatus === 'running') return
@@ -114,6 +113,8 @@ export default function MeshPage() {
       <MeshPanel
         brainstorm={ctx?.brainstorm}
         qa={ctx?.qa}
+        brainstormActions={brainstormStream.actions}
+        qaActions={qaStream.actions}
         userAnswers={ctx?.userAnswers ?? {}}
         selectedExpansions={ctx?.selectedExpansions ?? []}
         onToggleExpansion={handleToggleExpansion}

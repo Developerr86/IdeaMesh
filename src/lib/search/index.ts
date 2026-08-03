@@ -3,6 +3,9 @@ import { fetchPageText } from './http'
 import { tavilyProvider } from './tavily'
 import type { SearchHit, SearchProvider, SearchProviderName } from './types'
 import type { PipelineContext } from '@/types/pipeline'
+import type { ActionIcon } from '../stream'
+
+export type OnAction = (msg: string, icon?: ActionIcon) => void
 
 export type { SearchHit, SearchProvider, SearchProviderName } from './types'
 
@@ -67,8 +70,11 @@ export async function multiSearch(
   queries: string[],
   provider?: SearchProvider,
   maxPerQuery = 4,
+  onAction?: OnAction
 ): Promise<SearchHit[]> {
   const activeProvider = provider ?? getSearchProvider()
+  onAction?.(`Ran ${queries.length} searches via ${activeProvider.name}`, 'search')
+
   const settled = await runQueries(queries, activeProvider, maxPerQuery)
 
   const flat: SearchHit[] = []
@@ -97,14 +103,14 @@ export async function multiSearch(
   return deduped.sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
 }
 
-/** Run multiSearch with automatic DuckDuckGo fallback when the primary provider fails. */
 export async function multiSearchWithFallback(
   queries: string[],
+  onAction?: OnAction
 ): Promise<{ hits: SearchHit[]; providerName: string }> {
   const primary = getSearchProvider()
 
   try {
-    const hits = await multiSearch(queries, primary)
+    const hits = await multiSearch(queries, primary, 4, onAction)
     if (hits.length > 0) return { hits, providerName: primary.name }
   } catch (err) {
     console.warn(`[search] ${primary.name} failed:`, err)
@@ -112,20 +118,22 @@ export async function multiSearchWithFallback(
 
   if (primary.name !== duckDuckGoProvider.name) {
     console.info('[search] falling back to duckduckgo')
-    const hits = await multiSearch(queries, duckDuckGoProvider)
+    onAction?.('Falling back to DuckDuckGo search', 'search')
+    const hits = await multiSearch(queries, duckDuckGoProvider, 4, onAction)
     return { hits, providerName: 'duckduckgo' }
   }
 
   throw new Error('All search providers failed')
 }
 
-export async function enrichHits(hits: SearchHit[], limit = 5): Promise<SearchHit[]> {
+export async function enrichHits(hits: SearchHit[], limit = 5, onAction?: OnAction): Promise<SearchHit[]> {
   const enrichEnabled = process.env.SEARCH_ENRICH_PAGES !== 'false'
   if (!enrichEnabled || hits.length === 0) return hits
 
   const top = hits.slice(0, limit)
   const enriched = await Promise.all(
     top.map(async (hit) => {
+      onAction?.(`Opened page ${new URL(hit.url).hostname.replace(/^www\./, '')}`, 'globe')
       const pageText = await fetchPageText(hit.url)
       if (!pageText) return hit
       return {

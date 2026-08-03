@@ -7,16 +7,18 @@ import { Skeleton } from '@/components/ui/Skeleton'
 import { StreamContainer } from '@/components/ui/StreamContainer'
 import { StreamText, StreamBlock } from '@/components/ui/StreamText'
 import { ExternalLink } from 'lucide-react'
+import { AgentAction } from '@/lib/stream'
 
 interface ComparePanelProps {
   comparison?: ComparisonOutput
+  compareActions?: AgentAction[]
   isRunning: boolean
   isError?: boolean
   errorMessage?: string
   onRetry?: () => void
 }
 
-export function ComparePanel({ comparison, isRunning, isError, errorMessage, onRetry }: ComparePanelProps) {
+export function ComparePanel({ comparison, compareActions, isRunning, isError, errorMessage, onRetry }: ComparePanelProps) {
   return (
     <div className="space-y-4">
       <AgentCard
@@ -26,6 +28,7 @@ export function ComparePanel({ comparison, isRunning, isError, errorMessage, onR
         isError={isError}
         errorMessage={errorMessage}
         onRetry={onRetry}
+        actions={compareActions}
       >
         {comparison ? (
           <StreamContainer className="space-y-5">

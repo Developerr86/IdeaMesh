@@ -6,12 +6,15 @@ import { usePipelineStore } from '@/store/pipelineStore'
 import { ScoutPanel } from '@/components/stages/ScoutPanel'
 import { ScoutOutput } from '@/types/pipeline'
 import { ChevronRight, RefreshCw } from 'lucide-react'
+import { useAgentStream } from '@/hooks/useAgentStream'
 
 export default function ScoutPage() {
   const { pipeline, setStageStatus, setCurrentStage, updateContext } = usePipelineStore()
   const router = useRouter()
-  const [isRunning, setIsRunning] = useState(false)
-  const [error, setError] = useState<string | undefined>()
+  const scoutStream = useAgentStream<ScoutOutput>()
+  
+  const isRunning = scoutStream.isRunning
+  const error = scoutStream.error
 
   const stageStatus = pipeline?.stages.scout.status
 
@@ -24,31 +27,25 @@ export default function ScoutPage() {
 
   const runScout = useCallback(async () => {
     if (!pipeline) return
-    setIsRunning(true)
-    setError(undefined)
     setStageStatus('scout', 'running')
     setCurrentStage('scout')
 
+    scoutStream.reset()
+
     try {
-      const res = await fetch('/api/agents/scout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ context: pipeline.context }),
-      })
-
-      const data = await res.json()
-      if (data.error) throw new Error(data.error)
-
-      updateContext({ scout: data.result as ScoutOutput })
-      setStageStatus('scout', 'done')
+      await scoutStream.runStream(
+        '/api/agents/scout',
+        { context: pipeline.context },
+        (res) => {
+          updateContext({ scout: res })
+          setStageStatus('scout', 'done')
+        }
+      )
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Scout stage failed'
-      setError(message)
       setStageStatus('scout', 'error', message)
-    } finally {
-      setIsRunning(false)
     }
-  }, [pipeline, setStageStatus, setCurrentStage, updateContext])
+  }, [pipeline, setStageStatus, setCurrentStage, updateContext, scoutStream])
 
   useEffect(() => {
     if (!pipeline || stageStatus === 'done' || stageStatus === 'running') return
@@ -79,6 +76,7 @@ export default function ScoutPage() {
 
       <ScoutPanel
         scout={pipeline.context.scout}
+        scoutActions={scoutStream.actions}
         isRunning={isRunning}
         isError={stageStatus === 'error'}
         errorMessage={error}

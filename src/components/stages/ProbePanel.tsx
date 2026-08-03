@@ -8,10 +8,13 @@ import { Skeleton } from '@/components/ui/Skeleton'
 import { StreamContainer } from '@/components/ui/StreamContainer'
 import { StreamText, StreamBlock } from '@/components/ui/StreamText'
 import { ShieldAlert } from 'lucide-react'
+import { AgentAction } from '@/lib/stream'
 
 interface ProbePanelProps {
   prosCons?: ProsConsOutput
   critique?: CritiqueOutput
+  prosConsActions?: AgentAction[]
+  critiqueActions?: AgentAction[]
   isRunning: boolean
   isError?: boolean
   errorMessage?: string
@@ -66,7 +69,7 @@ function Quadrant({ title, titleColor, symbol, symbolColor, items, field, labelS
   )
 }
 
-export function ProbePanel({ prosCons, critique, isRunning, isError, errorMessage, onRetry }: ProbePanelProps) {
+export function ProbePanel({ prosCons, critique, prosConsActions, critiqueActions, isRunning, isError, errorMessage, onRetry }: ProbePanelProps) {
   return (
     <div className="space-y-4">
       <AgentCard
@@ -76,6 +79,7 @@ export function ProbePanel({ prosCons, critique, isRunning, isError, errorMessag
         isError={isError}
         errorMessage={errorMessage}
         onRetry={onRetry}
+        actions={prosConsActions}
       >
         {prosCons ? (
           <StreamContainer className="grid grid-cols-2 gap-4">
@@ -134,6 +138,7 @@ export function ProbePanel({ prosCons, critique, isRunning, isError, errorMessag
         agentName="Critique Agent"
         accentColor="text-accent-coral"
         isRunning={isRunning && !critique}
+        actions={critiqueActions}
       >
         {critique ? (
           <StreamContainer className="space-y-3">

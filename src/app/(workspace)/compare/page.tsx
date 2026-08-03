@@ -6,12 +6,15 @@ import { usePipelineStore } from '@/store/pipelineStore'
 import { ComparePanel } from '@/components/stages/ComparePanel'
 import { ComparisonOutput } from '@/types/pipeline'
 import { ChevronRight, RefreshCw } from 'lucide-react'
+import { useAgentStream } from '@/hooks/useAgentStream'
 
 export default function ComparePage() {
   const { pipeline, setStageStatus, setCurrentStage, updateContext } = usePipelineStore()
   const router = useRouter()
-  const [isRunning, setIsRunning] = useState(false)
-  const [error, setError] = useState<string | undefined>()
+  const compareStream = useAgentStream<ComparisonOutput>()
+  
+  const isRunning = compareStream.isRunning
+  const error = compareStream.error
 
   const stageStatus = pipeline?.stages.compare.status
 
@@ -24,31 +27,25 @@ export default function ComparePage() {
 
   const runCompare = useCallback(async () => {
     if (!pipeline) return
-    setIsRunning(true)
-    setError(undefined)
     setStageStatus('compare', 'running')
     setCurrentStage('compare')
 
+    compareStream.reset()
+
     try {
-      const res = await fetch('/api/agents/compare', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ context: pipeline.context }),
-      })
-
-      const data = await res.json()
-      if (data.error) throw new Error(data.error)
-
-      updateContext({ comparison: data.result as ComparisonOutput })
-      setStageStatus('compare', 'done')
+      await compareStream.runStream(
+        '/api/agents/compare',
+        { context: pipeline.context },
+        (res) => {
+          updateContext({ comparison: res })
+          setStageStatus('compare', 'done')
+        }
+      )
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Compare stage failed'
-      setError(message)
       setStageStatus('compare', 'error', message)
-    } finally {
-      setIsRunning(false)
     }
-  }, [pipeline, setStageStatus, setCurrentStage, updateContext])
+  }, [pipeline, setStageStatus, setCurrentStage, updateContext, compareStream])
 
   useEffect(() => {
     if (!pipeline || stageStatus === 'done' || stageStatus === 'running') return
@@ -79,6 +76,7 @@ export default function ComparePage() {
 
       <ComparePanel
         comparison={pipeline.context.comparison}
+        compareActions={compareStream.actions}
         isRunning={isRunning}
         isError={stageStatus === 'error'}
         errorMessage={error}

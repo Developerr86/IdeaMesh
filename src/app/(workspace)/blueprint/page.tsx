@@ -6,12 +6,15 @@ import { usePipelineStore } from '@/store/pipelineStore'
 import { BlueprintPanel } from '@/components/stages/BlueprintPanel'
 import { BlueprintOutput } from '@/types/pipeline'
 import { ChevronRight, RefreshCw } from 'lucide-react'
+import { useAgentStream } from '@/hooks/useAgentStream'
 
 export default function BlueprintPage() {
   const { pipeline, setStageStatus, setCurrentStage, updateContext } = usePipelineStore()
   const router = useRouter()
-  const [isRunning, setIsRunning] = useState(false)
-  const [error, setError] = useState<string | undefined>()
+  const blueprintStream = useAgentStream<BlueprintOutput>()
+  
+  const isRunning = blueprintStream.isRunning
+  const error = blueprintStream.error
 
   const stageStatus = pipeline?.stages.blueprint.status
 
@@ -24,31 +27,25 @@ export default function BlueprintPage() {
 
   const runBlueprint = useCallback(async () => {
     if (!pipeline) return
-    setIsRunning(true)
-    setError(undefined)
     setStageStatus('blueprint', 'running')
     setCurrentStage('blueprint')
 
+    blueprintStream.reset()
+
     try {
-      const res = await fetch('/api/agents/blueprint', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ context: pipeline.context }),
-      })
-
-      const data = await res.json()
-      if (data.error) throw new Error(data.error)
-
-      updateContext({ blueprint: data.result as BlueprintOutput })
-      setStageStatus('blueprint', 'done')
+      await blueprintStream.runStream(
+        '/api/agents/blueprint',
+        { context: pipeline.context },
+        (res) => {
+          updateContext({ blueprint: res })
+          setStageStatus('blueprint', 'done')
+        }
+      )
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Blueprint agent failed'
-      setError(message)
       setStageStatus('blueprint', 'error', message)
-    } finally {
-      setIsRunning(false)
     }
-  }, [pipeline, setStageStatus, setCurrentStage, updateContext])
+  }, [pipeline, setStageStatus, setCurrentStage, updateContext, blueprintStream])
 
   useEffect(() => {
     if (!pipeline || stageStatus === 'done' || stageStatus === 'running') return
@@ -83,6 +80,7 @@ export default function BlueprintPage() {
 
       <BlueprintPanel
         blueprint={pipeline.context.blueprint}
+        blueprintActions={blueprintStream.actions}
         isRunning={isRunning}
         isError={stageStatus === 'error'}
         errorMessage={error}

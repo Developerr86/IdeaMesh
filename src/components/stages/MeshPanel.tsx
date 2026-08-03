@@ -2,6 +2,7 @@
 
 import { BrainstormOutput, QAOutput, UserAnswers } from '@/types/pipeline'
 import { AgentCard } from '@/components/ui/AgentCard'
+import { AgentAction } from '@/lib/stream'
 import { Tag } from '@/components/ui/Tag'
 import { EditableBlock } from '@/components/ui/EditableBlock'
 import { Skeleton } from '@/components/ui/Skeleton'
@@ -14,6 +15,8 @@ import { cn } from '@/lib/utils'
 interface MeshPanelProps {
   brainstorm?: BrainstormOutput
   qa?: QAOutput
+  brainstormActions?: AgentAction[]
+  qaActions?: AgentAction[]
   userAnswers: UserAnswers
   selectedExpansions: string[]
   onToggleExpansion: (expansion: string) => void
@@ -28,6 +31,8 @@ interface MeshPanelProps {
 export function MeshPanel({
   brainstorm,
   qa,
+  brainstormActions,
+  qaActions,
   userAnswers,
   selectedExpansions,
   onToggleExpansion,
@@ -122,6 +127,7 @@ export function MeshPanel({
           isError={isError && !brainstorm}
           errorMessage={errorMessage}
           onRetry={onRetry}
+          actions={brainstormActions}
         >
           {brainstorm ? (
             <StreamContainer className="space-y-4">
@@ -380,7 +386,12 @@ export function MeshPanel({
       )}
 
       {phase === 'qna' && !qa && (
-        <AgentCard agentName="Q&A Agent" accentColor="text-accent-purple" isRunning={isRunning}>
+        <AgentCard 
+          agentName="Q&A Agent" 
+          accentColor="text-accent-purple" 
+          isRunning={isRunning}
+          actions={qaActions}
+        >
           <div className="space-y-5">
             <div className="flex items-center gap-2">
               <Skeleton className="h-2 w-8" />

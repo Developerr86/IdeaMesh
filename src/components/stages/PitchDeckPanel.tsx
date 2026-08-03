@@ -8,9 +8,11 @@ import { StreamText, StreamBlock } from '@/components/ui/StreamText'
 import { cn } from '@/lib/utils'
 import { useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { AgentAction } from '@/lib/stream'
 
 interface PitchDeckPanelProps {
   deck?: PitchDeckOutput
+  pitchdeckActions?: AgentAction[]
   isRunning: boolean
   isError?: boolean
   errorMessage?: string
@@ -111,7 +113,7 @@ const SLIDE_RENDERERS: Record<string, React.FC<{ slide: PitchDeckOutput['slides'
   closing: ClosingSlide,
 }
 
-export function PitchDeckPanel({ deck, isRunning, isError, errorMessage, onRetry }: PitchDeckPanelProps) {
+export function PitchDeckPanel({ deck, pitchdeckActions, isRunning, isError, errorMessage, onRetry }: PitchDeckPanelProps) {
   const [currentSlide, setCurrentSlide] = useState(0)
 
   if (!deck && !isRunning && !isError) return null
@@ -131,6 +133,7 @@ export function PitchDeckPanel({ deck, isRunning, isError, errorMessage, onRetry
         isError={isError}
         errorMessage={errorMessage}
         onRetry={onRetry}
+        actions={pitchdeckActions}
       >
         {deck && slide && SlideComponent ? (
           <div>

@@ -6,12 +6,15 @@ import { usePipelineStore } from '@/store/pipelineStore'
 import { PitchDeckPanel } from '@/components/stages/PitchDeckPanel'
 import { PitchDeckOutput } from '@/types/pipeline'
 import { RefreshCw } from 'lucide-react'
+import { useAgentStream } from '@/hooks/useAgentStream'
 
 export default function PitchDeckPage() {
   const { pipeline, setStageStatus, setCurrentStage, updateContext } = usePipelineStore()
   const router = useRouter()
-  const [isRunning, setIsRunning] = useState(false)
-  const [error, setError] = useState<string | undefined>()
+  const pitchdeckStream = useAgentStream<PitchDeckOutput>()
+  
+  const isRunning = pitchdeckStream.isRunning
+  const error = pitchdeckStream.error
 
   const stageStatus = pipeline?.stages.pitchdeck.status
 
@@ -24,31 +27,25 @@ export default function PitchDeckPage() {
 
   const runPitchDeck = useCallback(async () => {
     if (!pipeline) return
-    setIsRunning(true)
-    setError(undefined)
     setStageStatus('pitchdeck', 'running')
     setCurrentStage('pitchdeck')
 
+    pitchdeckStream.reset()
+
     try {
-      const res = await fetch('/api/agents/pitchdeck', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ context: pipeline.context }),
-      })
-
-      const data = await res.json()
-      if (data.error) throw new Error(data.error)
-
-      updateContext({ pitchDeck: data.result as PitchDeckOutput })
-      setStageStatus('pitchdeck', 'done')
+      await pitchdeckStream.runStream(
+        '/api/agents/pitchdeck',
+        { context: pipeline.context },
+        (res) => {
+          updateContext({ pitchDeck: res })
+          setStageStatus('pitchdeck', 'done')
+        }
+      )
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Pitch deck agent failed'
-      setError(message)
       setStageStatus('pitchdeck', 'error', message)
-    } finally {
-      setIsRunning(false)
     }
-  }, [pipeline, setStageStatus, setCurrentStage, updateContext])
+  }, [pipeline, setStageStatus, setCurrentStage, updateContext, pitchdeckStream])
 
   useEffect(() => {
     if (!pipeline || stageStatus === 'done' || stageStatus === 'running') return
@@ -83,6 +80,7 @@ export default function PitchDeckPage() {
 
       <PitchDeckPanel
         deck={pipeline.context.pitchDeck}
+        pitchdeckActions={pitchdeckStream.actions}
         isRunning={isRunning}
         isError={stageStatus === 'error'}
         errorMessage={error}

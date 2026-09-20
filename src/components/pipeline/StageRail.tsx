@@ -7,6 +7,8 @@ import { Check, Circle, AlertCircle, Loader2, GitBranch, CornerUpLeft } from 'lu
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 
+const branchRequests = new Map<string, Promise<SavedPipelineMeta[]>>()
+
 interface StageRailProps {
   currentStage: StageId
   stages: Record<StageId, { status: StageStatus }>
@@ -69,7 +71,13 @@ export function StageRail({ currentStage, stages, onStageClick, hiddenStageIds }
   useEffect(() => {
     if (!rootId) return
     let alive = true
-    fetchBranches(rootId).then((b) => {
+    const key = `${rootId}:${pipeline?.id ?? ''}`
+    let request = branchRequests.get(key)
+    if (!request) {
+      request = fetchBranches(rootId).finally(() => branchRequests.delete(key))
+      branchRequests.set(key, request)
+    }
+    request.then((b) => {
       if (alive) setBranches(b)
     })
     return () => {

@@ -1,3 +1,4 @@
+import { enforceAgentRateLimit } from '@/lib/rateLimit'
 import { getAI, getModel } from '@/lib/ai/client'
 import { brainstormPrompt } from '@/lib/ai/prompts'
 import { safeParseJSON } from '@/lib/utils'
@@ -15,6 +16,8 @@ const FALLBACK: BrainstormOutput = {
 }
 
 export async function POST(req: Request) {
+  const rateLimit = await enforceAgentRateLimit('brainstorm', 10)
+  if (rateLimit) return rateLimit
   const { stream, emitAction, emitResult, emitError, close } = createAgentStream<BrainstormOutput>()
 
   ;(async () => {

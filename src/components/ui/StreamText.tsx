@@ -1,6 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
+
 import { cn } from '@/lib/utils'
 
 interface StreamTextProps {
@@ -35,15 +36,17 @@ export function StreamText({ children, className }: StreamTextProps) {
 }
 
 interface StreamBlockProps extends StreamTextProps {
-  as?: React.ElementType
+  as?: 'div' | 'span' | 'p' | 'li'
 }
+
+const MOTION_BLOCKS = { div: motion.div, span: motion.span, p: motion.p, li: motion.li }
 
 // A simple block variant that treats its entire content as one block instead of splitting by word.
 // Use this for lists, small tags, etc where word-by-word is too much.
 export function StreamBlock({ children, className, as: Component = 'div' }: StreamBlockProps) {
-  const MotionComponent = motion(Component)
+  const MotionBlock = MOTION_BLOCKS[Component]
   return (
-    <MotionComponent
+    <MotionBlock
       className={className}
       variants={{
         hidden: { opacity: 0, y: 4, filter: 'blur(1px)' },
@@ -52,6 +55,6 @@ export function StreamBlock({ children, className, as: Component = 'div' }: Stre
       transition={{ duration: 0.3, ease: 'easeOut' }}
     >
       {children}
-    </MotionComponent>
+    </MotionBlock>
   )
 }

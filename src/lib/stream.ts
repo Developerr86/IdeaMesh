@@ -6,12 +6,12 @@ export type AgentAction = {
   icon?: ActionIcon;
 };
 
-export type AgentStreamEvent<T = any> =
+export type AgentStreamEvent<T = unknown> =
   | { type: 'action'; action: AgentAction }
   | { type: 'result'; data: T }
   | { type: 'error'; message: string };
 
-export function createAgentStream<T = any>() {
+export function createAgentStream<T = unknown>() {
   let streamController: ReadableStreamDefaultController<Uint8Array>;
   const encoder = new TextEncoder();
 

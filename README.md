@@ -27,12 +27,12 @@ LLM_API_KEY=sk-...
 LLM_BASE_URL=https://api.openai.com/v1
 LLM_MODEL=gpt-4o
 
-# Web search (Scout stage)
-TAVILY_API_KEY=tvly-...
+# Web search is keyless: DuckDuckGo with Bing fallback.
+SEARCH_PROVIDER=duckduckgo
 
 # Supabase (auth + pipeline persistence)
 NEXT_PUBLIC_SUPABASE_URL=https://<project>.supabase.co
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 ```
 
 The Supabase project must have the `profiles` and `pipelines` tables created (see `context.md` → Supabase schema). Google OAuth, if used, must be configured in the Supabase dashboard.
@@ -48,7 +48,7 @@ The Supabase project must have the `profiles` and `pipelines` tables created (se
 | 1 | Seed | User input (title, description, personal/business) |
 | 2 | Mesh | Brainstorm, Q&A |
 | 3 | Probe | Pros/Cons, Critique |
-| 4 | Scout | Tavily web search (competitors, similar tools) |
+| 4 | Scout | Keyless DuckDuckGo search with Bing fallback |
 | 5 | Compare | Competitor diff, gap analysis |
 | 6 | Blueprint | Tech stack, build phases, MVP scope, coding-agent prompts |
 | 7 | Pitch Deck | 6–8 slide investor deck (business ideas only) |

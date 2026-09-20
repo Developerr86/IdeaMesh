@@ -5,6 +5,7 @@ import { useEditModeStore } from '@/store/editModeStore'
 import { usePipelineStore } from '@/store/pipelineStore'
 import { setAtPath, parsePath } from '@/lib/jsonPath'
 import { cn } from '@/lib/utils'
+import { validateRefinementInstruction } from '@/lib/refinementValidation'
 import {
   Sparkles,
   ChevronUp,
@@ -63,6 +64,8 @@ export function RefinementQueueBar() {
     setPhase('forking')
     setErrorMsg(null)
     try {
+      const invalid = items.map((item) => validateRefinementInstruction(item.instruction)).find(Boolean)
+      if (invalid) throw new Error(invalid)
       const sourcePipelineId = pipeline.id
       // 1. Branch if any downstream is done. We capture and use the latest
       //    pipeline state from the store (branchPipeline mutates it). After

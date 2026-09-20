@@ -1,3 +1,4 @@
+import { enforceAgentRateLimit } from '@/lib/rateLimit'
 import { getAI, getModel } from '@/lib/ai/client'
 import { comparisonPrompt } from '@/lib/ai/prompts'
 import { safeParseJSON } from '@/lib/utils'
@@ -8,6 +9,8 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
 export async function POST(req: Request) {
+  const rateLimit = await enforceAgentRateLimit('compare', 10)
+  if (rateLimit) return rateLimit
   const { stream, emitAction, emitResult, emitError, close } = createAgentStream<ComparisonOutput>()
 
   ;(async () => {

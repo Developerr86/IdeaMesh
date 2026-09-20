@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom'
 import { useEditModeStore, type EditTarget } from '@/store/editModeStore'
 import { usePipelineStore } from '@/store/pipelineStore'
 import { cn } from '@/lib/utils'
+import { MAX_REFINEMENT_LENGTH, validateRefinementInstruction } from '@/lib/refinementValidation'
 import { StickyNote, X, Plus } from 'lucide-react'
 
 const POPOVER_WIDTH = 340
@@ -33,6 +34,7 @@ function EditPopoverInner({ target }: { target: EditTarget }) {
   )
 
   const [instruction, setInstruction] = useState(existing?.instruction ?? '')
+  const validationError = instruction ? validateRefinementInstruction(instruction) : null
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const popoverRef = useRef<HTMLDivElement>(null)
 
@@ -71,7 +73,7 @@ function EditPopoverInner({ target }: { target: EditTarget }) {
 
   const handleQueue = () => {
     const text = instruction.trim()
-    if (!text) return
+    if (!text || validateRefinementInstruction(text)) return
     const pipeline = usePipelineStore.getState().pipeline
     if (!pipeline) return
     enqueue({
@@ -128,6 +130,7 @@ function EditPopoverInner({ target }: { target: EditTarget }) {
         }}
         placeholder="What should change here? e.g. mention the regulatory angle…"
         rows={3}
+        maxLength={MAX_REFINEMENT_LENGTH}
         className={cn(
           'w-full resize-none rounded-lg bg-surface-2 border border-border',
           'px-2 py-1.5 text-xs text-white/80 placeholder:text-white/20',
@@ -135,13 +138,15 @@ function EditPopoverInner({ target }: { target: EditTarget }) {
         )}
       />
 
+      {validationError && <p className="mt-1 text-[10px] text-accent-coral">{validationError}</p>}
+
       <div className="mt-2 flex items-center justify-between gap-2">
         <p className="text-[10px] text-white/30 truncate">
           {existing ? 'Updating queued note' : 'Cmd/Ctrl + Enter to add'}
         </p>
         <button
           onClick={handleQueue}
-          disabled={!instruction.trim()}
+          disabled={!instruction.trim() || Boolean(validationError)}
           className={cn(
             'flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium',
             'bg-accent-purple/20 text-accent-purple hover:bg-accent-purple/30',

@@ -1,6 +1,8 @@
+import { enforceAgentRateLimit } from '@/lib/rateLimit'
 import { getAI, getModel } from '@/lib/ai/client'
 import { safeParseJSON } from '@/lib/utils'
 import { getAtPath } from '@/lib/jsonPath'
+import { validateRefinementInstruction } from '@/lib/refinementValidation'
 import { PipelineContext, StageId } from '@/types/pipeline'
 
 export const dynamic = 'force-dynamic'
@@ -112,6 +114,8 @@ Respond now with the single JSON object.`
 }
 
 export async function POST(req: Request) {
+  const rateLimit = await enforceAgentRateLimit('refine-batch', 5)
+  if (rateLimit) return rateLimit
   try {
     const body = (await req.json()) as Partial<BatchRefineRequest>
 
@@ -140,12 +144,8 @@ export async function POST(req: Request) {
           { status: 400 },
         )
       }
-      if (r.instruction.length > 2000) {
-        return Response.json(
-          { error: `Refinement #${i + 1} instruction too long (max 2000 chars)` },
-          { status: 400 },
-        )
-      }
+      const instructionError = validateRefinementInstruction(r.instruction)
+      if (instructionError) return Response.json({ error: `Refinement #${i + 1}: ${instructionError}` }, { status: 400 })
       const currentValue = getAtPath(fullReq.fullContext, r.targetPath)
       if (currentValue === undefined) {
         return Response.json(

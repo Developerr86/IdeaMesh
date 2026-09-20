@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { isSupabaseConfigured } from '@/lib/supabase/config'
-import { User, LogOut, UserCircle, ChevronDown, LogIn } from 'lucide-react'
+import { LogOut, UserCircle, ChevronDown, LogIn } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
 

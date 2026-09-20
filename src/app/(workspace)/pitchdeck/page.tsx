@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { usePipelineStore } from '@/store/pipelineStore'
 import { PitchDeckPanel } from '@/components/stages/PitchDeckPanel'

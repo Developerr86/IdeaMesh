@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { AgentAction, AgentStreamEvent } from '@/lib/stream';
 
-export function useAgentStream<T = any>() {
+export function useAgentStream<T = unknown>() {
   const [actions, setActions] = useState<AgentAction[]>([]);
   const [isRunning, setIsRunning] = useState(false);
   const [error, setError] = useState<string | undefined>();
@@ -14,7 +14,7 @@ export function useAgentStream<T = any>() {
 
   const runStream = useCallback(async (
     url: string,
-    body: any,
+    body: unknown,
     onResult?: (result: T) => void,
     onError?: (error: string) => void
   ) => {

@@ -1,3 +1,4 @@
+import { enforceAgentRateLimit } from '@/lib/rateLimit'
 import { getAI, getModel } from '@/lib/ai/client'
 import { blueprintCorePrompt, blueprintPhasesPrompt, blueprintAgentPromptsPrompt } from '@/lib/ai/prompts'
 import { safeParseJSON } from '@/lib/utils'
@@ -24,6 +25,8 @@ const coreFallback: CoreBlueprint = {
 }
 
 export async function POST(req: Request) {
+  const rateLimit = await enforceAgentRateLimit('blueprint', 5)
+  if (rateLimit) return rateLimit
   const { stream, emitAction, emitResult, emitError, close } = createAgentStream<BlueprintOutput>()
 
   ;(async () => {

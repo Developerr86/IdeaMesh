@@ -87,7 +87,7 @@ async function getAuthUser() {
 
 // Reset every stage strictly after `forkStage` back to idle, so the new branch
 // can re-run the downstream pipeline with the edited upstream state.
-function resetDownstream(
+export function resetDownstream(
   stages: Record<StageId, StageState>,
   forkStage: StageId,
 ): Record<StageId, StageState> {
@@ -100,7 +100,7 @@ function resetDownstream(
 }
 
 // Drop downstream context keys when branching, so a re-run actually regenerates them.
-function trimDownstreamContext(
+export function trimDownstreamContext(
   context: PipelineContext,
   forkStage: StageId,
 ): PipelineContext {
@@ -403,16 +403,18 @@ export const usePipelineStore = create<PipelineStore>()(
               }
             } catch { /* skip */ }
           }
-          return metas.sort((a, b) => a.createdAt - b.createdAt)
+          return metas.sort((a, b) => b.createdAt - a.createdAt).slice(0, 50).reverse()
         }
         const supabase = createClient()
         const { data } = await supabase
           .from('pipelines')
           .select('id, title, idea_type, current_stage, created_at, updated_at, root_id, parent_id, branch_name, forked_at_stage')
           .eq('root_id', rootId)
-          .order('created_at', { ascending: true })
+          .order('created_at', { ascending: false })
+          .limit(50)
 
         if (!data) return []
+        data.reverse()
         return data.map((p) => ({
           id: p.id as string,
           title: p.title as string,

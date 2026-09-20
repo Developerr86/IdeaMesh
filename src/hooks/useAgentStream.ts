@@ -12,6 +12,7 @@ export function useAgentStream<T = any>() {
     setError(undefined);
   }, []);
 
+  const runStream = useCallback(async (
     url: string,
     body: any,
     onResult?: (result: T) => void,

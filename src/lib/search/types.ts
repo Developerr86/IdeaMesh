@@ -10,4 +10,4 @@ export interface SearchProvider {
   search(query: string, maxResults?: number): Promise<SearchHit[]>
 }
 
-export type SearchProviderName = 'auto' | 'tavily' | 'duckduckgo'
+export type SearchProviderName = 'auto' | 'tavily' | 'duckduckgo' | 'bing'

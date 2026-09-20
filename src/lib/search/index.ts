@@ -1,3 +1,5 @@
+import { bingProvider } from './bing'
+import { getCachedSearch, setCachedSearch } from './cache'
 import { duckDuckGoProvider } from './duckduckgo'
 import { fetchPageText } from './http'
 import { tavilyProvider } from './tavily'
@@ -10,19 +12,19 @@ export type OnAction = (msg: string, icon?: ActionIcon) => void
 export type { SearchHit, SearchProvider, SearchProviderName } from './types'
 
 function resolveProviderName(): SearchProviderName {
-  const configured = (process.env.SEARCH_PROVIDER ?? 'auto').toLowerCase() as SearchProviderName
-  if (configured === 'tavily' || configured === 'duckduckgo') return configured
+  const configured = (process.env.SEARCH_PROVIDER ?? 'duckduckgo').toLowerCase() as SearchProviderName
+  if (configured === 'tavily' || configured === 'duckduckgo' || configured === 'bing') return configured
   return 'auto'
 }
 
 export function getSearchProvider(): SearchProvider {
   const name = resolveProviderName()
 
+  if (name === 'bing') return bingProvider
   if (name === 'tavily') return tavilyProvider
   if (name === 'duckduckgo') return duckDuckGoProvider
 
-  // auto: prefer Tavily when key is present, otherwise DuckDuckGo (free)
-  if (process.env.TAVILY_API_KEY) return tavilyProvider
+  // Keyless by default. Tavily remains only as an explicit legacy override.
   return duckDuckGoProvider
 }
 
@@ -73,6 +75,9 @@ export async function multiSearch(
   onAction?: OnAction
 ): Promise<SearchHit[]> {
   const activeProvider = provider ?? getSearchProvider()
+  const cacheKey = `${activeProvider.name}:${maxPerQuery}:${queries.join('\u001f')}`
+  const cached = getCachedSearch(cacheKey)
+  if (cached) return cached
   onAction?.(`Ran ${queries.length} searches via ${activeProvider.name}`, 'search')
 
   const settled = await runQueries(queries, activeProvider, maxPerQuery)
@@ -100,7 +105,9 @@ export async function multiSearch(
     return true
   })
 
-  return deduped.sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
+  const hits = deduped.sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
+  if (hits.length > 0) setCachedSearch(cacheKey, hits)
+  return hits
 }
 
 export async function multiSearchWithFallback(
@@ -108,22 +115,21 @@ export async function multiSearchWithFallback(
   onAction?: OnAction
 ): Promise<{ hits: SearchHit[]; providerName: string }> {
   const primary = getSearchProvider()
+  const chain = primary.name === 'duckduckgo'
+    ? [duckDuckGoProvider, bingProvider]
+    : [primary, duckDuckGoProvider, bingProvider].filter((p, i, all) => all.findIndex((x) => x.name === p.name) === i)
 
-  try {
-    const hits = await multiSearch(queries, primary, 4, onAction)
-    if (hits.length > 0) return { hits, providerName: primary.name }
-  } catch (err) {
-    console.warn(`[search] ${primary.name} failed:`, err)
+  for (const provider of chain) {
+    try {
+      const hits = await multiSearch(queries, provider, 4, onAction)
+      if (hits.length > 0) return { hits, providerName: provider.name }
+    } catch (error) {
+      console.warn(`[search] ${provider.name} failed:`, error)
+    }
+    const next = chain[chain.indexOf(provider) + 1]
+    if (next) onAction?.(`Falling back to ${next.name} search`, 'search')
   }
-
-  if (primary.name !== duckDuckGoProvider.name) {
-    console.info('[search] falling back to duckduckgo')
-    onAction?.('Falling back to DuckDuckGo search', 'search')
-    const hits = await multiSearch(queries, duckDuckGoProvider, 4, onAction)
-    return { hits, providerName: 'duckduckgo' }
-  }
-
-  throw new Error('All search providers failed')
+  throw new Error('All keyless search providers failed')
 }
 
 export async function enrichHits(hits: SearchHit[], limit = 5, onAction?: OnAction): Promise<SearchHit[]> {
